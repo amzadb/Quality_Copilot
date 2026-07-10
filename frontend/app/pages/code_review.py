@@ -9,6 +9,7 @@ from nicegui import ui
 from app.api.client import MOCK_PULL_REQUEST, api_client
 from app.components.layout import page_shell
 from app.components.review_comment_card import review_comment_card
+from app.components.status_banner import status_banner
 
 PROVIDER_LABELS: dict[str, str] = {
     "bitbucket": "Bitbucket",
@@ -22,6 +23,7 @@ async def render_code_review() -> None:
 
     state: dict[str, Any] = {
         "pr": None,
+        "run": None,
         "reviewing": False,
     }
 
@@ -74,9 +76,7 @@ async def render_code_review() -> None:
                         state["reviewing"] = True
                         loading_container.clear()
                         with loading_container:
-                            with ui.element("div").classes("loading-banner w-full"):
-                                ui.spinner(size="24px")
-                                ui.label("Analyzing diff with Claude...")
+                            status_banner("Analyzing diff with Claude...")
                         loading_container.set_visibility(True)
                         comments_container.set_visibility(False)
 
@@ -93,6 +93,7 @@ async def render_code_review() -> None:
                             await asyncio.sleep(1.5)
 
                         loading_container.set_visibility(False)
+                        state["run"] = run
                         show_comments(run)
 
                     ui.button("Run AI review", icon="auto_awesome", on_click=on_review).props(
@@ -103,12 +104,27 @@ async def render_code_review() -> None:
 
         def show_comments(run: dict[str, Any]) -> None:
             comments = run.get("comments", [])
+            run_id = run.get("run_id")
+
+            def _on_triage_change(updated: dict[str, Any]) -> None:
+                if not state.get("run"):
+                    return
+                run_comments = state["run"].get("comments", [])
+                for index, item in enumerate(run_comments):
+                    if item.get("id") == updated.get("id"):
+                        run_comments[index] = updated
+                        break
+
             comments_container.clear()
             with comments_container:
                 with ui.element("div").classes("review-comments-panel w-full"):
                     ui.label(f"Review comments ({len(comments)})").classes("review-comments-title")
                     for comment in comments:
-                        review_comment_card(comment)
+                        review_comment_card(
+                            comment,
+                            run_id=run_id,
+                            on_triage_change=_on_triage_change,
+                        )
 
             comments_container.set_visibility(True)
 

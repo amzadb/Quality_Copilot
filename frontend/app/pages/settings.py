@@ -19,6 +19,33 @@ LLM_PROVIDER_OPTIONS = {
     "claude": "Claude",
 }
 
+
+def _wire_test_connection(integration: str, button: ui.button, status_label: ui.label) -> None:
+    async def on_test() -> None:
+        button.props("loading")
+        status_label.text = ""
+        status_label.classes(
+            remove="integration-test-status--ok integration-test-status--error"
+        )
+        try:
+            result = await api_client.test_integration(integration)
+        except httpx.HTTPError as exc:
+            status_label.text = f"Error: {exc}"
+            status_label.classes(add="integration-test-status--error")
+        else:
+            if result.get("ok"):
+                status_label.text = "Connection OK"
+                status_label.classes(add="integration-test-status--ok")
+            else:
+                error = result.get("error") or {}
+                status_label.text = error.get("message", "Connection failed")
+                status_label.classes(add="integration-test-status--error")
+        finally:
+            button.props(remove="loading")
+
+    button.on_click(on_test)
+
+
 async def render_settings() -> None:
     page_shell("/settings")
 
@@ -37,6 +64,9 @@ async def render_settings() -> None:
                 jira_token = ui.input(placeholder="API token").classes("integration-field").props(
                     "outlined dense type=password"
                 )
+            with ui.element("div").classes("integration-test-row"):
+                jira_test_btn = ui.button("Test connection", icon="lan").props("outline no-caps dense")
+                jira_test_status = ui.label("").classes("integration-test-status")
 
         # --- Git provider ---
         with ui.element("div").classes("integration-card w-full"):
@@ -52,6 +82,9 @@ async def render_settings() -> None:
                 git_token = ui.input(placeholder="App password / access token").classes(
                     "integration-field--full w-full"
                 ).props("outlined dense type=password")
+            with ui.element("div").classes("integration-test-row"):
+                git_test_btn = ui.button("Test connection", icon="lan").props("outline no-caps dense")
+                git_test_status = ui.label("").classes("integration-test-status")
 
         # --- TestRail ---
         with ui.element("div").classes("integration-card w-full"):
@@ -69,6 +102,9 @@ async def render_settings() -> None:
                 testrail_token = ui.input(placeholder="API key").classes("integration-field--full w-full").props(
                     "outlined dense type=password"
                 )
+            with ui.element("div").classes("integration-test-row"):
+                testrail_test_btn = ui.button("Test connection", icon="lan").props("outline no-caps dense")
+                testrail_test_status = ui.label("").classes("integration-test-status")
 
         # --- LLM provider ---
         with ui.element("div").classes("integration-card w-full"):
@@ -82,9 +118,17 @@ async def render_settings() -> None:
                 llm_token = ui.input(placeholder="API key").classes("integration-field").props(
                     "outlined dense type=password"
                 )
+            with ui.element("div").classes("integration-test-row"):
+                llm_test_btn = ui.button("Test connection", icon="lan").props("outline no-caps dense")
+                llm_test_status = ui.label("").classes("integration-test-status")
 
         with ui.element("div").classes("settings-save-row"):
-            save_button = ui.button("Save settings").props("no-caps unelevated").classes("btn-generate")
+            save_button = ui.button("Save settings", icon="save").props("no-caps unelevated").classes("btn-generate")
+
+        _wire_test_connection("jira", jira_test_btn, jira_test_status)
+        _wire_test_connection("git_provider", git_test_btn, git_test_status)
+        _wire_test_connection("testrail", testrail_test_btn, testrail_test_status)
+        _wire_test_connection("llm", llm_test_btn, llm_test_status)
 
         def _apply_settings(data: dict[str, Any]) -> None:
             jira = data.get("jira", {})

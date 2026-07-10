@@ -162,6 +162,16 @@ MOCK_SETTINGS: dict[str, Any] = {
     "llm": {"provider": "claude", "token_set": False},
 }
 
+MOCK_TESTRAIL_PROJECTS: list[dict[str, Any]] = [
+    {"id": 1, "name": "Payments platform"},
+    {"id": 2, "name": "Core platform"},
+]
+
+MOCK_TESTRAIL_SUITES: list[dict[str, Any]] = [
+    {"id": 12, "name": "Login and authentication"},
+    {"id": 15, "name": "Checkout flow"},
+]
+
 
 def _parse_pr_url(url: str) -> tuple[str, int] | None:
     """Extract repo and PR number from a Bitbucket/GitHub-style URL."""
@@ -212,6 +222,13 @@ class ApiClient:
                 return response.json()
         return None
 
+    async def _patch(self, path: str, body: dict[str, Any]) -> dict[str, Any] | None:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.patch(f"{self.base_url}{path}", json=body)
+            if response.status_code == 200:
+                return response.json()
+        return None
+
     async def fetch_jira_ticket(self, ticket_key: str) -> dict[str, Any]:
         data = await self._get(f"/jira/tickets/{ticket_key}")
         if isinstance(data, dict):
@@ -225,6 +242,113 @@ class ApiClient:
         if isinstance(data, dict):
             return data
         return _mock_run(ticket_key)
+
+    async def save_test_cases_locally(
+        self, run_id: str, folder: str, formats: list[str]
+    ) -> dict[str, Any]:
+        data = await self._post(
+            f"/test-cases/runs/{run_id}/save",
+            {"folder": folder, "formats": formats},
+        )
+        if isinstance(data, dict):
+            return data
+        from datetime import date
+
+        today = date.today().isoformat()
+        ticket_key = folder.rstrip("/").split("/")[-1] or "PROJ-1042"
+        saved = [f"{folder.rstrip('/')}/{ticket_key}_{today}.{fmt}" for fmt in formats]
+        return {"saved_files": saved}
+
+    async def attach_to_jira(
+        self,
+        ticket_key: str,
+        run_id: str,
+        file_types: list[str],
+        comment: str | None = None,
+    ) -> dict[str, Any]:
+        body: dict[str, Any] = {"run_id": run_id, "file_types": file_types}
+        if comment:
+            body["comment"] = comment
+        data = await self._post(f"/jira/tickets/{ticket_key}/attachments", body)
+        if isinstance(data, dict):
+            return data
+        from datetime import date
+
+        today = date.today().isoformat()
+        return {
+            "attached_files": [f"{ticket_key}_{today}.{fmt}" for fmt in file_types],
+            "jira_attachment_ids": ["10021"],
+        }
+
+    async def list_testrail_projects(self) -> list[dict[str, Any]]:
+        data = await self._get("/testrail/projects")
+        if isinstance(data, list):
+            return data
+        return [p.copy() for p in MOCK_TESTRAIL_PROJECTS]
+
+    async def list_testrail_suites(self, project_id: int) -> list[dict[str, Any]]:
+        data = await self._get(f"/testrail/projects/{project_id}/suites")
+        if isinstance(data, list):
+            return data
+        return [s.copy() for s in MOCK_TESTRAIL_SUITES]
+
+    async def upload_to_testrail(
+        self,
+        run_id: str,
+        *,
+        project_id: int,
+        suite_id: int | None = None,
+        new_suite_name: str | None = None,
+    ) -> dict[str, Any]:
+        body: dict[str, Any] = {"project_id": project_id}
+        if suite_id is not None:
+            body["suite_id"] = suite_id
+        if new_suite_name:
+            body["new_suite_name"] = new_suite_name
+        data = await self._post(f"/test-cases/runs/{run_id}/testrail-upload", body)
+        if isinstance(data, dict):
+            return data
+        return {
+            "suite_id": suite_id or 99,
+            "testrail_case_ids": ["C1044", "C1045", "C1046"],
+            "uploaded_count": 12,
+        }
+
+    async def update_test_case(
+        self, run_id: str, case_id: str, update: dict[str, Any]
+    ) -> dict[str, Any]:
+        data = await self._patch(
+            f"/test-cases/runs/{run_id}/cases/{case_id}",
+            {k: v for k, v in update.items() if v is not None},
+        )
+        if isinstance(data, dict):
+            return data
+        for case in MOCK_TEST_CASES:
+            if case["id"] == case_id:
+                merged = {**case, **{k: v for k, v in update.items() if v is not None}}
+                return merged.copy()
+        return {"id": case_id, **update}
+
+    async def update_review_comment(
+        self, run_id: str, comment_id: str, triage_status: str
+    ) -> dict[str, Any]:
+        data = await self._patch(
+            f"/reviews/runs/{run_id}/comments/{comment_id}",
+            {"triage_status": triage_status},
+        )
+        if isinstance(data, dict):
+            return data
+        for comment in MOCK_REVIEW_COMMENTS:
+            if comment.get("id") == comment_id:
+                updated = {**comment, "triage_status": triage_status}
+                return updated.copy()
+        return {"id": comment_id, "triage_status": triage_status}
+
+    async def test_integration(self, integration: str) -> dict[str, Any]:
+        data = await self._post(f"/settings/{integration}/test", {})
+        if isinstance(data, dict):
+            return data
+        return {"ok": True}
 
     async def fetch_pull_request(self, *, url: str | None = None, repo: str | None = None, pr_number: int | None = None) -> dict[str, Any]:
         params: list[str] = []

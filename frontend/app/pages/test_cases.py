@@ -7,21 +7,28 @@ import httpx
 from nicegui import ui
 
 from app.api.client import MOCK_TICKET, api_client
+from app.components.dialogs.attach_jira_dialog import create_attach_jira_dialog
+from app.components.dialogs.save_local_dialog import create_save_local_dialog
+from app.components.dialogs.testrail_upload_dialog import create_testrail_upload_dialog
 from app.components.layout import page_shell
+from app.components.status_banner import status_banner
 from app.components.test_case_card import test_case_card
 
-# Bump when UI changes — visible in browser to confirm the latest code is running.
 UI_BUILD = "2026-07-09-2"
 
 
 async def render_test_cases() -> None:
     page_shell("/test-cases")
 
-    state: dict = {
+    state: dict[str, Any] = {
         "ticket": None,
         "run": None,
         "generating": False,
     }
+
+    open_save_dialog = create_save_local_dialog()
+    open_attach_dialog = create_attach_jira_dialog()
+    open_testrail_dialog = create_testrail_upload_dialog()
 
     with ui.column().classes("page-content page-stack w-full gap-0"):
         with ui.element("div").classes("page-section--title w-full"):
@@ -65,11 +72,9 @@ async def render_test_cases() -> None:
                         state["generating"] = True
                         loading_container.clear()
                         with loading_container:
-                            with ui.element("div").classes("loading-banner w-full"):
-                                ui.spinner(size="24px")
-                                ui.label(
-                                    "Generating test cases with Claude, this can take up to a minute..."
-                                )
+                            status_banner(
+                                "Generating test cases with Claude, this can take up to a minute..."
+                            )
                         loading_container.set_visibility(True)
                         results_container.set_visibility(False)
                         actions_container.set_visibility(False)
@@ -101,6 +106,15 @@ async def render_test_cases() -> None:
             file_paths = run.get("file_paths") or {}
             saved_path = file_paths.get("docx") or file_paths.get("csv") or ""
 
+            def _on_case_updated(updated: dict[str, Any]) -> None:
+                if not state.get("run"):
+                    return
+                run_cases = state["run"].get("test_cases", [])
+                for index, item in enumerate(run_cases):
+                    if item.get("id") == updated.get("id"):
+                        run_cases[index] = updated
+                        break
+
             results_container.clear()
             with results_container:
                 with ui.element("div").classes("results-panel w-full"):
@@ -112,7 +126,11 @@ async def render_test_cases() -> None:
                                 ui.label(saved_path)
 
                     for case in cases:
-                        test_case_card(case)
+                        test_case_card(
+                            case,
+                            run_id=run.get("run_id"),
+                            on_updated=_on_case_updated,
+                        )
 
             results_container.set_visibility(True)
 
@@ -121,17 +139,29 @@ async def render_test_cases() -> None:
                 ui.button(
                     "Save to local folder",
                     icon="save",
-                    on_click=lambda: ui.notify("Save to local folder — coming soon"),
+                    on_click=lambda: (
+                        open_save_dialog(run["run_id"], ticket["key"])
+                        if (run := state.get("run")) and (ticket := state.get("ticket"))
+                        else ui.notify("Generate test cases first", type="warning")
+                    ),
                 ).props("outline no-caps")
                 ui.button(
                     "Attach to JIRA",
                     icon="link",
-                    on_click=lambda: ui.notify("Attach to JIRA — coming soon"),
+                    on_click=lambda: (
+                        open_attach_dialog(run["run_id"], ticket["key"])
+                        if (run := state.get("run")) and (ticket := state.get("ticket"))
+                        else ui.notify("Generate test cases first", type="warning")
+                    ),
                 ).props("outline no-caps")
                 ui.button(
                     "Upload to TestRail",
                     icon="upload",
-                    on_click=lambda: ui.notify("Upload to TestRail — coming soon"),
+                    on_click=lambda: (
+                        open_testrail_dialog(run["run_id"])
+                        if (run := state.get("run"))
+                        else ui.notify("Generate test cases first", type="warning")
+                    ),
                 ).props("outline no-caps")
 
             actions_container.set_visibility(True)
