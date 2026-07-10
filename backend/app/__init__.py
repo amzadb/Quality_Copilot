@@ -1,0 +1,1 @@
+"""Quality Copilot FastAPI backend."""

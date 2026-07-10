@@ -1,0 +1,14 @@
+# Quality Copilot — Backend runtime dependencies
+fastapi>=0.115.0,<1.0.0
+uvicorn[standard]>=0.32.0,<1.0.0
+pydantic>=2.10.0,<3.0.0
+pydantic-settings>=2.6.0,<3.0.0
+python-multipart>=0.0.18
+sqlalchemy>=2.0.0,<3.0.0
+
+# HTTP client (FastAPI TestClient, future JIRA/TestRail/Git API calls)
+httpx2>=0.28.0
+
+# Development & testing (optional but recommended for local work)
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
