@@ -7,6 +7,7 @@ class AppSettings(BaseSettings):
     app_name: str = "Quality Copilot"
     api_v1_prefix: str = "/api/v1"
     debug: bool = False
+    database_url: str = "sqlite:///./quality_copilot.db"
 
 
 settings = AppSettings()

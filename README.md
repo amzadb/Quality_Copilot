@@ -73,6 +73,7 @@ Useful backend URLs:
 | `APP_NAME` | `Quality Copilot` | OpenAPI application title |
 | `API_V1_PREFIX` | `/api/v1` | API base path |
 | `DEBUG` | `false` | Debug mode |
+| `DATABASE_URL` | `sqlite:///./quality_copilot.db` | SQLAlchemy database URL |
 
 ### Frontend (`frontend/.env`)
 
@@ -86,12 +87,20 @@ Useful backend URLs:
 
 Integration secrets (JIRA, Git, TestRail, LLM) are stored server-side via the Settings API and are never returned in full on GET requests.
 
+Apply database migrations before first use:
+
+```powershell
+cd backend
+.venv\Scripts\activate
+alembic upgrade head
+```
+
 ## Implementation status
 
 | Layer | Status |
 |-------|--------|
 | **Frontend** | UI complete — all pages, dialogs, inline editing, and comment triage wired to the API client |
-| **Backend** | Skeleton — all endpoints registered in OpenAPI; business logic returns **501 Not Implemented** until integrations are built |
+| **Backend** | Foundation complete — DB engine/session, Alembic migrations, tests scaffold; business endpoints still return **501 Not Implemented** |
 
 The frontend works end-to-end with demo/mock data when the backend is down or stubbed, so UI development can proceed independently.
 
@@ -114,3 +123,4 @@ FastAPI backend (8000)
 
 - [backend/README.md](backend/README.md) — API overview, error handling, project structure, testing
 - [frontend/README.md](frontend/README.md) — UI structure, configuration, API integration details
+- [PROGRESS.md](PROGRESS.md) — Multi-agent backend implementation tracker

@@ -42,8 +42,37 @@ Optional settings can be provided via environment variables or a `.env` file in 
 | `APP_NAME` | `Quality Copilot` | Application title shown in OpenAPI docs |
 | `API_V1_PREFIX` | `/api/v1` | Base path for all v1 routes |
 | `DEBUG` | `false` | Enable debug mode |
+| `DATABASE_URL` | `sqlite:///./quality_copilot.db` | SQLAlchemy database URL (SQLite or PostgreSQL) |
 
-Integration secrets (JIRA, Bitbucket/GitHub/GitLab, TestRail, LLM) will be stored server-side via the Settings API once implemented — they are never returned in full by GET requests.
+Copy `.env.example` to `.env` and adjust as needed. Integration secrets (JIRA, Bitbucket/GitHub/GitLab, TestRail, LLM) will be stored server-side via the Settings API once implemented — they are never returned in full by GET requests.
+
+## Database setup
+
+Phase 0 adds SQLAlchemy engine/session handling and Alembic migrations.
+
+```powershell
+cd backend
+.venv\Scripts\activate
+pip install -r requirements.txt
+
+# Apply the baseline migration (creates all tables)
+alembic upgrade head
+```
+
+Useful Alembic commands:
+
+| Command | Purpose |
+|---------|---------|
+| `alembic upgrade head` | Apply all pending migrations |
+| `alembic downgrade -1` | Roll back one migration |
+| `alembic current` | Show current revision |
+| `alembic history` | List migration history |
+
+Run tests:
+
+```powershell
+pytest
+```
 
 ## Project structure
 
@@ -63,9 +92,13 @@ backend/
 │   │   ├── llm.py                 # Prompt templates + structured output models
 │   │   └── testrail.py
 │   ├── models/                    # SQLAlchemy DB models (tickets, runs, jobs, …)
+│   │   └── base.py                # Declarative base, engine, SessionLocal, get_db()
 │   ├── jobs/                      # Background task runner (BackgroundTasks MVP)
 │   └── core/
 │       └── errors.py              # AppError + consistent error response shape
+├── alembic/                       # Database migrations
+├── alembic.ini
+├── tests/                         # pytest suite (mirrors app/ concerns)
 ├── requirements.txt
 └── README.md
 ```
@@ -173,7 +206,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/test-cases/generate `
 
 ### Python TestClient
 
-`httpx2` is included in `requirements.txt` for FastAPI's test client:
+`httpx` is included in `requirements.txt` for FastAPI's test client:
 
 ```python
 from fastapi.testclient import TestClient
