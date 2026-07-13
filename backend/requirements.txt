@@ -8,6 +8,8 @@ sqlalchemy>=2.0.0,<3.0.0
 alembic>=1.14.0,<2.0.0
 
 # HTTP client (FastAPI TestClient, future JIRA/TestRail/Git API calls)
+# httpx works today; httpx2 is the Pydantic-stewarded successor — optional migration later
+# if Starlette's TestClient deprecation warning becomes blocking.
 httpx>=0.28.0,<1.0.0
 
 # Development & testing (optional but recommended for local work)

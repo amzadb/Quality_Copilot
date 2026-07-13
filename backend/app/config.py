@@ -8,6 +8,10 @@ class AppSettings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     debug: bool = False
     database_url: str = "sqlite:///./quality_copilot.db"
+    credentials_path: str = "./data/credentials.json"
+    jira_email: str | None = None
+    anthropic_api_version: str = "2023-06-01"
+    anthropic_model: str = "claude-sonnet-4-20250514"
 
 
 settings = AppSettings()

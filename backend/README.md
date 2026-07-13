@@ -43,6 +43,10 @@ Optional settings can be provided via environment variables or a `.env` file in 
 | `API_V1_PREFIX` | `/api/v1` | Base path for all v1 routes |
 | `DEBUG` | `false` | Enable debug mode |
 | `DATABASE_URL` | `sqlite:///./quality_copilot.db` | SQLAlchemy database URL (SQLite or PostgreSQL) |
+| `CREDENTIALS_PATH` | `./data/credentials.json` | Server-side integration secrets (never returned on GET) |
+| `JIRA_EMAIL` | _(none)_ | Atlassian account email for JIRA API token auth |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-20250514` | Claude model for LLM integration |
+| `ANTHROPIC_API_VERSION` | `2023-06-01` | Anthropic API version header |
 
 Copy `.env.example` to `.env` and adjust as needed. Integration secrets (JIRA, Bitbucket/GitHub/GitLab, TestRail, LLM) will be stored server-side via the Settings API once implemented — they are never returned in full by GET requests.
 
@@ -68,11 +72,15 @@ Useful Alembic commands:
 | `alembic current` | Show current revision |
 | `alembic history` | List migration history |
 
-Run tests:
+Run tests (from `backend/` with the project venv activated):
 
 ```powershell
-pytest
+cd backend
+.venv\Scripts\activate
+python -m pytest
 ```
+
+Integration tests call async code via `asyncio.run()` so they do not require the `pytest-asyncio` plugin.
 
 ## Project structure
 
@@ -134,24 +142,13 @@ See `/docs` for full request/response schemas.
 
 ## Current implementation status
 
-The backend is a **skeleton**. All business endpoints are wired and documented in OpenAPI, but service logic is not yet implemented. Calling any of these endpoints returns:
+| Layer | Status |
+|-------|--------|
+| **Foundation** | DB engine/session, Alembic migrations, pytest scaffold |
+| **Integrations + Settings** | JIRA, Bitbucket, TestRail, Claude LLM clients; settings persistence |
+| **Orchestration services** | Still stubbed (501) — `test_case_service`, `code_review_service`, `activity_service` |
 
-- **HTTP 501 Not Implemented**
-- A JSON body matching the contract error shape
-
-Example:
-
-```json
-{
-  "error": {
-    "code": "NOT_IMPLEMENTED",
-    "message": "Fetching JIRA ticket 'PROJ-1042' is not implemented yet. Connect the JIRA REST client and configure credentials in Settings.",
-    "details": null
-  }
-}
-```
-
-Domain-specific error codes (e.g. `JIRA_NOT_FOUND`, `JIRA_AUTH_FAILED`) will be added as integrations are built.
+Integration and settings endpoints are live. Orchestration endpoints (`POST /test-cases/generate`, `POST /reviews/generate`, activity feeds, etc.) return **501** until Phase 2.
 
 ## Error handling
 
@@ -206,7 +203,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/test-cases/generate `
 
 ### Python TestClient
 
-`httpx` is included in `requirements.txt` for FastAPI's test client:
+`httpx` is included in `requirements.txt` for FastAPI's test client and future outbound API calls. **`httpx2`** (Pydantic-stewarded successor to `httpx`) is an optional later migration if Starlette's TestClient deprecation warning becomes blocking — not required for Phase 0/1.
 
 ```python
 from fastapi.testclient import TestClient
