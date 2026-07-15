@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, PrimaryKeyConstraint, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -25,9 +25,12 @@ class TestCaseRun(Base):
 
 
 class GeneratedTestCase(Base):
-    __tablename__ = "generated_test_cases"
+    """Case IDs like TC-01 are unique per run, not globally."""
 
-    id: Mapped[str] = mapped_column(String(16), primary_key=True)
+    __tablename__ = "generated_test_cases"
+    __table_args__ = (PrimaryKeyConstraint("run_id", "id"),)
+
+    id: Mapped[str] = mapped_column(String(16))
     run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("test_case_runs.id", ondelete="CASCADE"))
     title: Mapped[str] = mapped_column(String(512))
     type: Mapped[str] = mapped_column(String(32))

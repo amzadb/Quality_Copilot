@@ -45,7 +45,7 @@ Optional settings can be provided via environment variables or a `.env` file in 
 | `DATABASE_URL` | `sqlite:///./quality_copilot.db` | SQLAlchemy database URL (SQLite or PostgreSQL) |
 | `CREDENTIALS_PATH` | `./data/credentials.json` | Server-side integration secrets (never returned on GET) |
 | `JIRA_EMAIL` | _(none)_ | Atlassian account email for JIRA API token auth |
-| `ANTHROPIC_MODEL` | `claude-sonnet-4-20250514` | Claude model for LLM integration |
+| `ANTHROPIC_MODEL` | `claude-sonnet-5` | Claude model for LLM integration |
 | `ANTHROPIC_API_VERSION` | `2023-06-01` | Anthropic API version header |
 
 Copy `.env.example` to `.env` and adjust as needed. Integration secrets (JIRA, Bitbucket/GitHub/GitLab, TestRail, LLM) will be stored server-side via the Settings API once implemented — they are never returned in full by GET requests.
@@ -146,9 +146,9 @@ See `/docs` for full request/response schemas.
 |-------|--------|
 | **Foundation** | DB engine/session, Alembic migrations, pytest scaffold |
 | **Integrations + Settings** | JIRA, Bitbucket, TestRail, Claude LLM clients; settings persistence |
-| **Orchestration services** | Still stubbed (501) — `test_case_service`, `code_review_service`, `activity_service` |
+| **Orchestration services** | Live — test case generation/export/push-back, AI code review, activity dashboard |
 
-Integration and settings endpoints are live. Orchestration endpoints (`POST /test-cases/generate`, `POST /reviews/generate`, activity feeds, etc.) return **501** until Phase 2.
+Apply migrations after pull: `alembic upgrade head` (includes `002_orchestration`).
 
 ## Error handling
 

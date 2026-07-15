@@ -11,7 +11,7 @@ class AppSettings(BaseSettings):
     credentials_path: str = "./data/credentials.json"
     jira_email: str | None = None
     anthropic_api_version: str = "2023-06-01"
-    anthropic_model: str = "claude-sonnet-4-20250514"
+    anthropic_model: str = "claude-sonnet-5"
 
 
 settings = AppSettings()

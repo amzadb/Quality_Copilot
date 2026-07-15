@@ -157,7 +157,12 @@ def _mock_review_run(pr: dict[str, Any]) -> dict[str, Any]:
 
 MOCK_SETTINGS: dict[str, Any] = {
     "jira": {"base_url": None, "token_set": False},
-    "git_provider": {"type": "bitbucket", "workspace": None, "token_set": False},
+    "git_provider": {
+        "type": "bitbucket",
+        "workspace": None,
+        "username": None,
+        "token_set": False,
+    },
     "testrail": {"base_url": None, "username": None, "token_set": False},
     "llm": {"provider": "claude", "token_set": False},
 }

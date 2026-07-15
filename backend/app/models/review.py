@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -14,6 +14,7 @@ class ReviewRun(Base):
     repo: Mapped[str] = mapped_column(String(256), index=True)
     pr_number: Mapped[int] = mapped_column(Integer, index=True)
     status: Mapped[str] = mapped_column(String(32), default="pending")
+    duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     comments: Mapped[list["ReviewCommentRecord"]] = relationship(

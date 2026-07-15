@@ -57,7 +57,8 @@ def configured_credentials(credentials_file, monkeypatch):
             git_provider=GitProviderSettings(
                 type="bitbucket",
                 workspace="acme",
-                token="git-token",
+                username="qa-bot",
+                token="git-app-password",
             ),
             testrail=TestRailSettings(
                 base_url="acme.testrail.io",

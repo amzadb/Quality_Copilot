@@ -82,6 +82,7 @@ class CredentialStore:
             git_provider=GitProviderSettings(
                 type=data["git_provider"].get("type"),
                 workspace=data["git_provider"].get("workspace"),
+                username=data["git_provider"].get("username"),
                 token_set=bool(data["git_provider"].get("token")),
             ),
             testrail=TestRailSettings(

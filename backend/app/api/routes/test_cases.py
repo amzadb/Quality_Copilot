@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 
@@ -63,7 +65,7 @@ async def download_test_cases(
         if format == "docx"
         else "text/csv"
     )
-    return FileResponse(path=path, media_type=media_type, filename=path.split("/")[-1])
+    return FileResponse(path=path, media_type=media_type, filename=Path(path).name)
 
 
 @router.post("/runs/{run_id}/testrail-upload", response_model=TestRailUploadResponse)

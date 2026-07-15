@@ -100,7 +100,7 @@ alembic upgrade head
 | Layer | Status |
 |-------|--------|
 | **Frontend** | UI complete — all pages, dialogs, inline editing, and comment triage wired to the API client |
-| **Backend** | Foundation complete — DB engine/session, Alembic migrations, tests scaffold; business endpoints still return **501 Not Implemented** |
+| **Backend** | Phase 0–2 complete — DB, integrations, settings, and orchestration (test cases, code review, activity) |
 
 The frontend works end-to-end with demo/mock data when the backend is down or stubbed, so UI development can proceed independently.
 

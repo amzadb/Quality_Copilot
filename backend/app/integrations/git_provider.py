@@ -1,9 +1,12 @@
-"""Git provider integration — fetch PR diff/metadata, post review comments."""
+"""Git provider integration — fetch PR diff/metadata, post review comments.
+
+v1 Bitbucket auth uses Atlassian app passwords with HTTP Basic auth
+(username + app password). Bearer tokens are intentionally not used.
+"""
 
 from __future__ import annotations
 
 import re
-from typing import Any
 
 import httpx
 from fastapi import Depends
@@ -51,21 +54,33 @@ class GitProviderIntegration:
     def __init__(self, credentials: CredentialStore) -> None:
         self._credentials = credentials
 
-    def _config(self) -> tuple[GitProviderType, str | None, str]:
+    def _config(self) -> tuple[GitProviderType, str | None, str, str]:
+        """Return provider, workspace, username, and app password."""
         section = self._credentials.get_section("git_provider")
         provider = section.get("type") or "bitbucket"
         workspace = section.get("workspace")
+        username = section.get("username")
         token = section.get("token")
         if not token:
             raise AppError(
                 status_code=400,
                 code="GIT_NOT_CONFIGURED",
-                message="Git provider is not configured. Set an access token in Settings.",
+                message="Git provider is not configured. Set an app password in Settings.",
             )
-        return provider, workspace, token
+        if provider == "bitbucket" and not username:
+            raise AppError(
+                status_code=400,
+                code="GIT_NOT_CONFIGURED",
+                message=(
+                    "Bitbucket app-password auth requires a username. "
+                    "Set Atlassian account username in Settings."
+                ),
+            )
+        return provider, workspace, username or "", token
 
-    def _headers(self, token: str) -> dict[str, str]:
-        return {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+    def _auth(self, username: str, token: str) -> tuple[str, str]:
+        """Bitbucket app passwords use Basic auth (username + app password)."""
+        return username, token
 
     def _resolve_repo(
         self,
@@ -95,7 +110,7 @@ class GitProviderIntegration:
         pr_number: int | None = None,
         url: str | None = None,
     ) -> PullRequestResponse:
-        provider, workspace, token = self._config()
+        provider, workspace, username, token = self._config()
         full_repo, pr_num = self._resolve_repo(
             repo=repo, pr_number=pr_number, url=url, workspace=workspace
         )
@@ -112,12 +127,12 @@ class GitProviderIntegration:
         pr_url = (
             f"{api_base}/repositories/{workspace_slug}/{repo_slug}/pullrequests/{pr_num}"
         )
-        headers = self._headers(token)
+        auth = self._auth(username, token)
 
         try:
-            payload = await request_json("GET", pr_url, headers=headers)
+            payload = await request_json("GET", pr_url, auth=auth)
             diff_text = await self._fetch_bitbucket_diff(
-                api_base, workspace_slug, repo_slug, pr_num, headers
+                api_base, workspace_slug, repo_slug, pr_num, auth
             )
         except AppError as exc:
             if exc.code == "NOT_FOUND":
@@ -130,7 +145,7 @@ class GitProviderIntegration:
                 raise AppError(
                     status_code=401,
                     code="GIT_AUTH_FAILED",
-                    message="Git provider authentication failed.",
+                    message="Git provider authentication failed. Check username and app password.",
                 ) from exc
             raise
 
@@ -152,13 +167,17 @@ class GitProviderIntegration:
         workspace: str,
         repo_slug: str,
         pr_number: int,
-        headers: dict[str, str],
+        auth: tuple[str, str],
     ) -> str:
         diff_url = (
             f"{api_base}/repositories/{workspace}/{repo_slug}/pullrequests/{pr_number}/diff"
         )
         async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.get(diff_url, headers={**headers, "Accept": "text/plain"})
+            response = await client.get(
+                diff_url,
+                auth=auth,
+                headers={"Accept": "text/plain"},
+            )
         if response.status_code >= 400:
             raise AppError(
                 status_code=502,
@@ -181,7 +200,7 @@ class GitProviderIntegration:
     async def post_review_comments(
         self, repo: str, pr_number: int, comments: list[ReviewComment]
     ) -> None:
-        provider, _, token = self._config()
+        provider, _, username, token = self._config()
         if provider != "bitbucket":
             raise AppError(
                 status_code=501,
@@ -195,18 +214,18 @@ class GitProviderIntegration:
             f"{api_base}/repositories/{workspace_slug}/{repo_slug}/pullrequests/"
             f"{pr_number}/comments"
         )
-        headers = self._headers(token)
+        auth = self._auth(username, token)
 
         for comment in comments:
             content = comment.comment
             if comment.file:
                 content = f"{comment.file}:{comment.line}\n\n{content}"
             body = {"content": {"raw": content}}
-            await request_json("POST", url, headers=headers, json=body)
+            await request_json("POST", url, auth=auth, json=body)
 
     async def test_connection(self) -> ConnectionTestResponse:
         try:
-            provider, _, token = self._config()
+            provider, _, username, token = self._config()
         except AppError as exc:
             return connection_failed(exc.code, str(exc.detail))
 
@@ -218,10 +237,13 @@ class GitProviderIntegration:
 
         url = "https://api.bitbucket.org/2.0/user"
         try:
-            await request_json("GET", url, headers=self._headers(token))
+            await request_json("GET", url, auth=self._auth(username, token))
         except AppError as exc:
             if exc.code == "AUTH_FAILED":
-                return connection_failed("GIT_AUTH_FAILED", "Git provider authentication failed.")
+                return connection_failed(
+                    "GIT_AUTH_FAILED",
+                    "Git provider authentication failed. Check username and app password.",
+                )
             return connection_failed("GIT_CONNECTION_FAILED", str(exc.detail))
         except httpx.HTTPError as exc:
             return connection_failed("GIT_CONNECTION_FAILED", str(exc))

@@ -77,11 +77,16 @@ async def render_settings() -> None:
                 git_type = ui.select(GIT_PROVIDER_OPTIONS, value="bitbucket").classes("integration-field").props(
                     "outlined dense"
                 )
-                git_workspace = ui.input(placeholder="acme").classes("integration-field").props("outlined dense")
+                git_workspace = ui.input(placeholder="Workspace (acme)").classes("integration-field").props(
+                    "outlined dense"
+                )
             with ui.element("div").classes("integration-row"):
-                git_token = ui.input(placeholder="App password / access token").classes(
-                    "integration-field--full w-full"
-                ).props("outlined dense type=password")
+                git_username = ui.input(placeholder="Atlassian username").classes("integration-field").props(
+                    "outlined dense"
+                )
+                git_token = ui.input(placeholder="App password").classes("integration-field").props(
+                    "outlined dense type=password"
+                )
             with ui.element("div").classes("integration-test-row"):
                 git_test_btn = ui.button("Test connection", icon="lan").props("outline no-caps dense")
                 git_test_status = ui.label("").classes("integration-test-status")
@@ -142,8 +147,10 @@ async def render_settings() -> None:
                 git_type.value = git["type"]
             if git.get("workspace"):
                 git_workspace.value = git["workspace"]
+            if git.get("username"):
+                git_username.value = git["username"]
             if git.get("token_set"):
-                git_token.props('placeholder="Token saved (enter to replace)"')
+                git_token.props('placeholder="App password saved (enter to replace)"')
 
             testrail = data.get("testrail", {})
             if testrail.get("base_url"):
@@ -173,6 +180,7 @@ async def render_settings() -> None:
                 "git_provider": {
                     "type": git_type.value,
                     "workspace": (git_workspace.value or "").strip() or None,
+                    "username": (git_username.value or "").strip() or None,
                 },
                 "testrail": {
                     "base_url": (testrail_base_url.value or "").strip() or None,

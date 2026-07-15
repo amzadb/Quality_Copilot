@@ -12,7 +12,14 @@ class JiraSettings(BaseModel):
 class GitProviderSettings(BaseModel):
     type: GitProviderType | None = None
     workspace: str | None = None
-    token: str | None = Field(default=None, description="Write-only; never returned on GET")
+    username: str | None = Field(
+        default=None,
+        description="Bitbucket Atlassian account username (required for app-password Basic auth)",
+    )
+    token: str | None = Field(
+        default=None,
+        description="Write-only Bitbucket app password; never returned on GET",
+    )
     token_set: bool = False
 
 
