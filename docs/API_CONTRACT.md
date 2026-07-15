@@ -5,7 +5,7 @@ Spec-level design for the FastAPI backend that the NiceGUI frontend calls. No im
 ## Conventions
 
 - **Base URL**: `/api/v1`
-- **Auth**: single-user / internal tool for v1 — no per-request user auth. Secrets (JIRA token, Bitbucket token, TestRail key, LLM key) live server-side, set via the Settings endpoints, never returned in full by GET requests (masked, e.g. `sk-...ab12`).
+- **Auth**: JWT Bearer (`Authorization: Bearer <access_token>`). Public: `POST /auth/register`, `POST /auth/login`, and `/health`. All other `/api/v1/*` routes require auth. Integration secrets are stored **per user** in `user_settings` (legacy `credentials.json` only when no user context). Secrets are never returned in full on GET (`token_set` only).
 - **Content type**: `application/json` for all requests/responses except file downloads.
 - **Error shape** (consistent across all endpoints):
   ```
@@ -22,10 +22,26 @@ Spec-level design for the FastAPI backend that the NiceGUI frontend calls. No im
 
 ---
 
+## 0. Auth
+
+### `POST /auth/register`
+Create a user + empty settings. Returns `{ access_token, token_type, user }`.
+
+### `POST /auth/login`
+Body: `{ "username", "password" }`. Returns the same token envelope as register.
+
+### `GET /auth/me`
+Current user (requires Bearer).
+
+### `POST /auth/logout`
+No-op server-side for JWT; client clears the token. Requires Bearer.
+
+---
+
 ## 1. Settings & integrations
 
 ### `GET /settings`
-Returns current integration config with secrets masked.
+Returns the **current user's** integration config with secrets masked. Requires auth.
 **Response**
 ```
 {

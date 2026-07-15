@@ -2,7 +2,7 @@
 
 from fastapi import Depends
 
-from app.core.credential_store import CredentialStore, get_credential_store
+from app.core.credential_store import DbCredentialStore, FileCredentialStore, get_credential_store
 from app.core.errors import AppError
 from app.integrations.git_provider import GitProviderIntegration, get_git_provider_integration
 from app.integrations.jira import JiraIntegration, get_jira_integration
@@ -11,11 +11,13 @@ from app.integrations.testrail import TestRailIntegration, get_testrail_integrat
 from app.schemas.common import ConnectionTestResponse
 from app.schemas.settings import SettingsResponse, SettingsUpdate
 
+CredentialStoreLike = FileCredentialStore | DbCredentialStore
+
 
 class SettingsService:
     def __init__(
         self,
-        store: CredentialStore,
+        store: CredentialStoreLike,
         jira: JiraIntegration,
         git: GitProviderIntegration,
         testrail: TestRailIntegration,
@@ -47,7 +49,7 @@ class SettingsService:
 
 
 def get_settings_service(
-    store: CredentialStore = Depends(get_credential_store),
+    store: CredentialStoreLike = Depends(get_credential_store),
     jira: JiraIntegration = Depends(get_jira_integration),
     git: GitProviderIntegration = Depends(get_git_provider_integration),
     testrail: TestRailIntegration = Depends(get_testrail_integration),

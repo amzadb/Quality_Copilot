@@ -18,7 +18,8 @@ UI_BUILD = "2026-07-09-2"
 
 
 async def render_test_cases() -> None:
-    page_shell("/test-cases")
+    if not page_shell("/test-cases"):
+        return
 
     state: dict[str, Any] = {
         "ticket": None,

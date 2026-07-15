@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
@@ -23,12 +22,17 @@ from app.integrations.testrail import get_testrail_integration
 from app.main import app
 from app.models import Base
 from app.models.base import get_db
+from app.schemas.common import ConnectionTestSuccess
 from app.schemas.jira import JiraAttachmentResponse, JiraTicketResponse
 from app.schemas.pull_requests import PullRequestResponse
 from app.schemas.testrail import TestRailProject, TestRailSuite, TestRailUploadResponse
 
 
 CONTRACT_PATHS = {
+    ("POST", "/api/v1/auth/register"),
+    ("POST", "/api/v1/auth/login"),
+    ("GET", "/api/v1/auth/me"),
+    ("POST", "/api/v1/auth/logout"),
     ("GET", "/api/v1/settings"),
     ("PUT", "/api/v1/settings"),
     ("POST", "/api/v1/settings/{integration}/test"),
@@ -89,10 +93,6 @@ def api_env(tmp_path, monkeypatch):
         attached_files=["PROJ-1042.docx"],
         jira_attachment_ids=["10021"],
     )
-    jira.test_connection.return_value = type("R", (), {"ok": True, "model_dump": lambda self: {"ok": True}})()
-    # ConnectionTestSuccess is a pydantic model - use real one
-    from app.schemas.common import ConnectionTestSuccess
-
     jira.test_connection.return_value = ConnectionTestSuccess()
     git.test_connection.return_value = ConnectionTestSuccess()
     llm.test_connection.return_value = ConnectionTestSuccess()
@@ -145,8 +145,14 @@ def api_env(tmp_path, monkeypatch):
 
     monkeypatch.chdir(tmp_path)
     client = TestClient(app)
+    register = client.post(
+        "/api/v1/auth/register",
+        json={"username": "contract", "password": "secret12", "email": "c@example.com"},
+    )
+    assert register.status_code == 200, register.text
+    headers = {"Authorization": f"Bearer {register.json()['access_token']}"}
     try:
-        yield client, jira, git, llm, testrail
+        yield client, headers, jira, git, llm, testrail
     finally:
         app.dependency_overrides.clear()
         engine.dispose()
@@ -165,8 +171,8 @@ def test_openapi_covers_contract_paths(api_env):
 
 
 def test_validation_error_matches_contract_shape(api_env):
-    client, *_ = api_env
-    response = client.post("/api/v1/test-cases/generate", json={})
+    client, headers, *_ = api_env
+    response = client.post("/api/v1/test-cases/generate", headers=headers, json={})
     assert response.status_code == 422
     body = response.json()
     assert body["error"]["code"] == "VALIDATION_ERROR"
@@ -174,9 +180,10 @@ def test_validation_error_matches_contract_shape(api_env):
 
 
 def test_settings_masks_tokens(api_env):
-    client, *_ = api_env
+    client, headers, *_ = api_env
     put = client.put(
         "/api/v1/settings",
+        headers=headers,
         json={"jira": {"base_url": "acme.atlassian.net", "token": "secret-token"}},
     )
     assert put.status_code == 200
@@ -184,26 +191,30 @@ def test_settings_masks_tokens(api_env):
     assert body["jira"]["token_set"] is True
     assert "token" not in body["jira"]
 
-    get = client.get("/api/v1/settings")
+    get = client.get("/api/v1/settings", headers=headers)
     assert get.status_code == 200
     assert "token" not in get.json()["jira"]
 
 
 def test_settings_connection_test(api_env):
-    client, *_ = api_env
-    response = client.post("/api/v1/settings/jira/test")
+    client, headers, *_ = api_env
+    response = client.post("/api/v1/settings/jira/test", headers=headers)
     assert response.status_code == 200
     assert response.json() == {"ok": True}
 
 
 def test_full_test_case_and_review_flow(api_env):
-    client, jira, git, llm, testrail = api_env
+    client, headers, jira, git, llm, testrail = api_env
 
-    ticket = client.get("/api/v1/jira/tickets/PROJ-1042")
+    ticket = client.get("/api/v1/jira/tickets/PROJ-1042", headers=headers)
     assert ticket.status_code == 200
     assert ticket.json()["key"] == "PROJ-1042"
 
-    generated = client.post("/api/v1/test-cases/generate", json={"ticket_key": "PROJ-1042"})
+    generated = client.post(
+        "/api/v1/test-cases/generate",
+        headers=headers,
+        json={"ticket_key": "PROJ-1042"},
+    )
     assert generated.status_code == 200
     run = generated.json()
     assert run["ticket_key"] == "PROJ-1042"
@@ -213,6 +224,7 @@ def test_full_test_case_and_review_flow(api_env):
 
     patched = client.patch(
         f"/api/v1/test-cases/runs/{run_id}/cases/TC-01",
+        headers=headers,
         json={"title": "Updated SSO case"},
     )
     assert patched.status_code == 200
@@ -220,44 +232,54 @@ def test_full_test_case_and_review_flow(api_env):
 
     saved = client.post(
         f"/api/v1/test-cases/runs/{run_id}/save",
+        headers=headers,
         json={"folder": "exports/PROJ-1042", "formats": ["csv"]},
     )
     assert saved.status_code == 200
     assert saved.json()["saved_files"]
 
-    download = client.get(f"/api/v1/test-cases/runs/{run_id}/download?format=csv")
+    download = client.get(
+        f"/api/v1/test-cases/runs/{run_id}/download?format=csv",
+        headers=headers,
+    )
     assert download.status_code == 200
     assert "text/csv" in download.headers["content-type"]
 
     attached = client.post(
         "/api/v1/jira/tickets/PROJ-1042/attachments",
+        headers=headers,
         json={"run_id": run_id, "file_types": ["docx"], "comment": "QA cases"},
     )
     assert attached.status_code == 200
     assert attached.json()["jira_attachment_ids"] == ["10021"]
     jira.attach_files.assert_awaited()
 
-    projects = client.get("/api/v1/testrail/projects")
+    projects = client.get("/api/v1/testrail/projects", headers=headers)
     assert projects.status_code == 200
     assert projects.json()[0]["id"] == 1
 
-    suites = client.get("/api/v1/testrail/projects/1/suites")
+    suites = client.get("/api/v1/testrail/projects/1/suites", headers=headers)
     assert suites.status_code == 200
     assert suites.json()[0]["id"] == 12
 
     uploaded = client.post(
         f"/api/v1/test-cases/runs/{run_id}/testrail-upload",
+        headers=headers,
         json={"project_id": 1, "suite_id": 12},
     )
     assert uploaded.status_code == 200
     assert uploaded.json()["uploaded_count"] == 1
 
-    pr = client.get("/api/v1/pull-requests?repo=acme/payments&pr_number=318")
+    pr = client.get(
+        "/api/v1/pull-requests?repo=acme/payments&pr_number=318",
+        headers=headers,
+    )
     assert pr.status_code == 200
     assert pr.json()["pr_number"] == 318
 
     review = client.post(
         "/api/v1/reviews/generate",
+        headers=headers,
         json={"repo": "acme/payments", "pr_number": 318},
     )
     assert review.status_code == 200
@@ -267,17 +289,18 @@ def test_full_test_case_and_review_flow(api_env):
 
     triaged = client.patch(
         f"/api/v1/reviews/runs/{review_body['run_id']}/comments/{comment_id}",
+        headers=headers,
         json={"triage_status": "addressed"},
     )
     assert triaged.status_code == 200
     assert triaged.json()["triage_status"] == "addressed"
 
-    recent = client.get("/api/v1/activity/recent?limit=10")
+    recent = client.get("/api/v1/activity/recent?limit=10", headers=headers)
     assert recent.status_code == 200
     assert isinstance(recent.json(), list)
     assert len(recent.json()) >= 2
 
-    summary = client.get("/api/v1/activity/summary")
+    summary = client.get("/api/v1/activity/summary", headers=headers)
     assert summary.status_code == 200
     body = summary.json()
     assert body["tickets_processed"] >= 1
@@ -287,8 +310,11 @@ def test_full_test_case_and_review_flow(api_env):
 
 
 def test_app_error_shape_for_not_found(api_env):
-    client, *_ = api_env
-    response = client.get("/api/v1/test-cases/runs/00000000-0000-0000-0000-000000000099")
+    client, headers, *_ = api_env
+    response = client.get(
+        "/api/v1/test-cases/runs/00000000-0000-0000-0000-000000000099",
+        headers=headers,
+    )
     assert response.status_code == 404
     body = response.json()
     assert body["error"]["code"] == "RUN_NOT_FOUND"

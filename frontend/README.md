@@ -21,7 +21,7 @@ pip install -r requirements.txt
 python -m app.main
 ```
 
-Open **http://127.0.0.1:9000** in your browser.
+Open **http://127.0.0.1:9000/login** in your browser. Sign in with the seeded admin (`admin` / `admin` by default) or create an account.
 
 Run alongside the backend:
 
@@ -48,6 +48,7 @@ Set via environment variables or a `.env` file in the `frontend/` directory:
 | `API_V1_PREFIX` | `/api/v1` | API version prefix |
 | `PORT` | `9000` | NiceGUI server port |
 | `RELOAD` | `true` | Auto-reload on code changes |
+| `STORAGE_SECRET` | local-dev default | Secret for NiceGUI `app.storage.user` (login session) |
 
 ## Project structure
 
@@ -63,11 +64,13 @@ frontend/
 │   │   ├── stat_card.py     # Dashboard metric cards
 │   │   ├── activity_list.py # Recent activity rows and badges
 │   │   └── styles.py        # CSS matching the mockup
+│   ├── auth.py              # JWT session helpers (NiceGUI storage)
 │   └── pages/
+│       ├── login.py         # Login / sign-up
 │       ├── dashboard.py     # Home — stats + recent activity
-│       ├── test_cases.py    # Placeholder
-│       ├── code_review.py   # Placeholder
-│       └── settings.py      # Placeholder
+│       ├── test_cases.py
+│       ├── code_review.py
+│       └── settings.py
 ├── requirements.txt
 └── README.md
 ```
@@ -76,14 +79,15 @@ frontend/
 
 | Route | Page | Status |
 |-------|------|--------|
-| `/` | Dashboard | Implemented — metric cards and recent activity |
-| `/test-cases` | Test case generation | Implemented — fetch ticket, generate, results, export actions |
-| `/code-review` | PR code review | Implemented — fetch diff, AI review, comment cards |
-| `/settings` | Integration settings | Implemented — JIRA, Git, TestRail, LLM forms |
+| `/login` | Login / Sign up | JWT via backend; token in `app.storage.user` |
+| `/` | Dashboard | Requires auth — metric cards and recent activity |
+| `/test-cases` | Test case generation | Requires auth |
+| `/code-review` | PR code review | Requires auth |
+| `/settings` | Integration settings | Per-user settings after login |
 
 ## API integration
 
-The UI talks to the FastAPI backend at `/api/v1`. With the backend running (Phase 0–3 complete), live responses are preferred.
+The UI talks to the FastAPI backend at `/api/v1` with `Authorization: Bearer <token>`. On `401`, the session is cleared and the user is sent to `/login`.
 
 Demo/mock data is used **only when the backend is unreachable** (connection/timeout). HTTP 4xx/5xx from a live API are surfaced to the UI — they are not silently replaced with demo success. Empty `/activity/recent` lists are kept as empty (not replaced by a fake feed).
 

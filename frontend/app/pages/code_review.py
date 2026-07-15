@@ -19,7 +19,8 @@ PROVIDER_LABELS: dict[str, str] = {
 
 
 async def render_code_review() -> None:
-    page_shell("/code-review")
+    if not page_shell("/code-review"):
+        return
 
     state: dict[str, Any] = {
         "pr": None,

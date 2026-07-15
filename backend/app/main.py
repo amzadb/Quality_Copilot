@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.exceptions import HTTPException, RequestValidationError
 
@@ -9,6 +11,18 @@ from app.core.errors import (
     http_exception_handler,
     validation_exception_handler,
 )
+from app.models.base import SessionLocal
+from app.services.auth_service import seed_admin_user
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    db = SessionLocal()
+    try:
+        seed_admin_user(db)
+    finally:
+        db.close()
+    yield
 
 
 def create_app() -> FastAPI:
@@ -17,6 +31,7 @@ def create_app() -> FastAPI:
         version="1.0.0",
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=lifespan,
     )
 
     app.add_exception_handler(AppError, app_error_handler)

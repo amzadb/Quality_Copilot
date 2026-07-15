@@ -10,8 +10,12 @@ from datetime import datetime
 from typing import Any
 
 import httpx
+from nicegui import ui
 
+from app.auth import clear_session, get_token
 from app.config import settings
+
+_AUTH_PUBLIC_PATHS = {"/auth/login", "/auth/register"}
 
 # Demo data — used only when the backend is unreachable (connection/timeout).
 MOCK_SUMMARY: dict[str, Any] = {
@@ -210,6 +214,21 @@ class ApiClient:
     def __init__(self, base_url: str | None = None) -> None:
         self.base_url = base_url or settings.api_base
 
+    def _headers(self) -> dict[str, str]:
+        token = get_token()
+        if token:
+            return {"Authorization": f"Bearer {token}"}
+        return {}
+
+    def _handle_unauthorized(self, path: str) -> None:
+        if path in _AUTH_PUBLIC_PATHS:
+            return
+        clear_session()
+        try:
+            ui.navigate.to("/login")
+        except RuntimeError:
+            pass
+
     async def _request(
         self,
         method: str,
@@ -225,10 +244,18 @@ class ApiClient:
                     method,
                     f"{self.base_url}{path}",
                     json=json,
+                    headers=self._headers(),
                 )
         except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError):
             return None
 
+        if response.status_code == 401:
+            self._handle_unauthorized(path)
+            raise httpx.HTTPStatusError(
+                f"HTTP 401 for {method} {path}",
+                request=response.request,
+                response=response,
+            )
         if response.status_code >= 400:
             raise httpx.HTTPStatusError(
                 f"HTTP {response.status_code} for {method} {path}",
@@ -250,6 +277,34 @@ class ApiClient:
 
     async def _patch(self, path: str, body: dict[str, Any]) -> dict[str, Any] | list[Any] | None:
         return await self._request("PATCH", path, json=body, timeout=30.0)
+
+    async def login(self, username: str, password: str) -> dict[str, Any]:
+        data = await self._post("/auth/login", {"username": username, "password": password})
+        if not isinstance(data, dict):
+            raise RuntimeError("Backend unreachable; cannot log in.")
+        return data
+
+    async def register(
+        self, username: str, password: str, *, email: str | None = None
+    ) -> dict[str, Any]:
+        body: dict[str, Any] = {"username": username, "password": password}
+        if email:
+            body["email"] = email
+        data = await self._post("/auth/register", body)
+        if not isinstance(data, dict):
+            raise RuntimeError("Backend unreachable; cannot register.")
+        return data
+
+    async def me(self) -> dict[str, Any] | None:
+        data = await self._get("/auth/me")
+        return data if isinstance(data, dict) else None
+
+    async def logout(self) -> None:
+        try:
+            await self._post("/auth/logout", {})
+        except Exception:  # noqa: BLE001 — client clears session regardless
+            pass
+        clear_session()
 
     async def fetch_jira_ticket(self, ticket_key: str) -> dict[str, Any]:
         data = await self._get(f"/jira/tickets/{ticket_key}")

@@ -6,6 +6,7 @@ from app.models.pull_request import PullRequestRecord
 from app.models.review import ReviewCommentRecord, ReviewRun
 from app.models.test_case_run import GeneratedTestCase, TestCaseRun
 from app.models.ticket import Ticket
+from app.models.user import User, UserSettings
 
 __all__ = [
     "Base",
@@ -16,4 +17,6 @@ __all__ = [
     "ReviewRun",
     "TestCaseRun",
     "Ticket",
+    "User",
+    "UserSettings",
 ]

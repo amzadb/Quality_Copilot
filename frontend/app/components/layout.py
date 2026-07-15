@@ -2,6 +2,7 @@
 
 from nicegui import ui
 
+from app.auth import logout, require_login
 from app.components.styles import APP_CSS
 from app.config import settings
 
@@ -36,13 +37,19 @@ def render_sidebar(active_path: str) -> None:
             ui.element("div").classes("flex-grow")
 
             _nav_link(SETTINGS_ITEM, active_path)
+            ui.button("Logout", on_click=logout).classes("w-full mt-1").props(
+                "flat dense color=negative"
+            )
 
 
 def apply_global_styles() -> None:
     ui.add_css(APP_CSS)
 
 
-def page_shell(active_path: str) -> None:
-    """Set up layout chrome shared by every page."""
+def page_shell(active_path: str) -> bool:
+    """Set up layout chrome. Returns False if redirected to login."""
+    if not require_login():
+        return False
     apply_global_styles()
     render_sidebar(active_path)
+    return True

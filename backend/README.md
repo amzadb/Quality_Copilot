@@ -43,12 +43,16 @@ Optional settings can be provided via environment variables or a `.env` file in 
 | `API_V1_PREFIX` | `/api/v1` | Base path for all v1 routes |
 | `DEBUG` | `false` | Enable debug mode |
 | `DATABASE_URL` | `sqlite:///./quality_copilot.db` | SQLAlchemy database URL (SQLite or PostgreSQL) |
-| `CREDENTIALS_PATH` | `./data/credentials.json` | Server-side integration secrets (never returned on GET) |
+| `CREDENTIALS_PATH` | `./data/credentials.json` | Legacy shared secrets file (fallback when unauthenticated) |
+| `JWT_SECRET` | local-dev default | **Change in production** — signs access tokens |
+| `JWT_EXPIRE_MINUTES` | `1440` | Access token lifetime |
+| `ADMIN_USERNAME` | `admin` | Seeded admin username (created on startup if missing) |
+| `ADMIN_PASSWORD` | `admin` | Seeded admin password |
 | `JIRA_EMAIL` | _(none)_ | Atlassian account email for JIRA API token auth |
 | `ANTHROPIC_MODEL` | `claude-sonnet-5` | Claude model for LLM integration |
 | `ANTHROPIC_API_VERSION` | `2023-06-01` | Anthropic API version header |
 
-Copy `.env.example` to `.env` and adjust as needed. Integration secrets (JIRA, Bitbucket/GitHub/GitLab, TestRail, LLM) will be stored server-side via the Settings API once implemented â€” they are never returned in full by GET requests.
+Copy `.env.example` to `.env` and adjust as needed. Authenticated users store integration secrets in `user_settings` (per user). `credentials.json` is only used as a legacy fallback without a Bearer token. Secrets are never returned in full by GET requests.
 
 ## Database setup
 
@@ -130,7 +134,8 @@ All endpoints are prefixed with `/api/v1`.
 
 | Group | Endpoints | Description |
 |-------|-----------|-------------|
-| **Settings** | `GET/PUT /settings`, `POST /settings/{integration}/test` | Integration config (secrets masked on read) |
+| **Auth** | `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, `POST /auth/logout` | JWT register/login (public register + login) |
+| **Settings** | `GET/PUT /settings`, `POST /settings/{integration}/test` | Per-user integration config (auth required; secrets masked on read) |
 | **JIRA** | `GET /jira/tickets/{key}`, `POST .../attachments` | Ticket fetch and file attachment |
 | **Test cases** | `POST /test-cases/generate`, run CRUD, save, download, TestRail upload | Generation, export, and push-back |
 | **TestRail** | `GET /testrail/projects`, `GET .../suites` | Project/suite dropdowns for upload dialog |
@@ -145,11 +150,12 @@ See `/docs` for full request/response schemas.
 | Layer | Status |
 |-------|--------|
 | **Foundation** | DB engine/session, Alembic migrations, pytest scaffold |
-| **Integrations + Settings** | JIRA, Bitbucket, TestRail, Claude LLM clients; settings persistence |
+| **Integrations + Settings** | JIRA, Bitbucket, TestRail, Claude LLM; per-user DB settings + file fallback |
+| **Auth** | JWT Bearer, admin seed, self-registration; protected API routers |
 | **Orchestration services** | Live — test case generation/export/push-back, AI code review, activity dashboard |
 | **QA / contract** | OpenAPI coverage tests; contract error shape for 4xx/422 |
 
-Apply migrations after pull: `alembic upgrade head` (includes `002_orchestration`).
+Apply migrations after pull: `alembic upgrade head` (includes `003_users`).
 
 ## Error handling
 

@@ -1,6 +1,5 @@
 """Tests for credential storage and settings service."""
 
-from app.core.credential_store import reset_credential_store
 from app.integrations.git_provider import GitProviderIntegration
 from app.integrations.jira import JiraIntegration
 from app.integrations.llm import LLMIntegration
@@ -64,16 +63,14 @@ def test_settings_service_get_and_update(configured_credentials):
     assert stored["workspace"] == "new-workspace"
 
 
-def test_settings_api_round_trip(client, credentials_file, monkeypatch):
-    monkeypatch.setattr("app.config.settings.credentials_path", str(credentials_file._path))
-    reset_credential_store(credentials_file._path)
-
-    response = client.get("/api/v1/settings")
+def test_settings_api_round_trip(app_client, auth_headers):
+    response = app_client.get("/api/v1/settings", headers=auth_headers)
     assert response.status_code == 200
     assert response.json()["jira"]["token_set"] is False
 
-    put_response = client.put(
+    put_response = app_client.put(
         "/api/v1/settings",
+        headers=auth_headers,
         json={
             "jira": {"base_url": "acme.atlassian.net", "token": "secret"},
             "llm": {"provider": "claude", "token": "llm-secret"},

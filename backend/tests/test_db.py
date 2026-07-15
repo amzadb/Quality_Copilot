@@ -69,6 +69,8 @@ def test_baseline_migration_creates_expected_tables(migrated_db_path):
         "review_runs",
         "review_comments",
         "jobs",
+        "users",
+        "user_settings",
     }
 
 

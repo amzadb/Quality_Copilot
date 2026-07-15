@@ -41,6 +41,49 @@ def client() -> TestClient:
 
 
 @pytest.fixture
+def app_client(tmp_path, monkeypatch):
+    """TestClient bound to an isolated SQLite DB with full schema (incl. users)."""
+    db_file = tmp_path / "app.db"
+    database_url = f"sqlite:///{db_file.as_posix()}"
+    engine = create_engine(database_url, connect_args={"check_same_thread": False})
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+    cred_path = tmp_path / "credentials.json"
+    monkeypatch.setattr(settings, "credentials_path", str(cred_path))
+    reset_credential_store(cred_path)
+
+    def override_db():
+        db = session_factory()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    from app.models.base import get_db
+
+    app.dependency_overrides[get_db] = override_db
+    test_client = TestClient(app)
+    try:
+        yield test_client
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        engine.dispose()
+
+
+@pytest.fixture
+def auth_headers(app_client) -> dict[str, str]:
+    """Register a test user and return Bearer headers."""
+    response = app_client.post(
+        "/api/v1/auth/register",
+        json={"username": "tester", "password": "secret12", "email": "tester@example.com"},
+    )
+    assert response.status_code == 200, response.text
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
 def credentials_file(tmp_path, monkeypatch):
     path = tmp_path / "credentials.json"
     monkeypatch.setattr(settings, "credentials_path", str(path))

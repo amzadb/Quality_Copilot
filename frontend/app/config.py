@@ -8,7 +8,9 @@ class FrontendSettings(BaseSettings):
     backend_url: str = "http://127.0.0.1:8000"
     api_v1_prefix: str = "/api/v1"
     port: int = 9000
-    reload: bool = False
+    reload: bool = True
+    # Required by NiceGUI for app.storage.user (browser session storage)
+    storage_secret: str = "dev-only-change-me-quality-copilot-frontend"
 
     @property
     def api_base(self) -> str:

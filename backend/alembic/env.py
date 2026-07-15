@@ -15,6 +15,8 @@ from app.models import (  # noqa: F401
     ReviewRun,
     TestCaseRun,
     Ticket,
+    User,
+    UserSettings,
 )
 
 config = context.config

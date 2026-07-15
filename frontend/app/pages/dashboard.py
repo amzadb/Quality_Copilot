@@ -9,7 +9,8 @@ from app.components.stat_card import stat_card
 
 
 async def render_dashboard() -> None:
-    page_shell("/")
+    if not page_shell("/"):
+        return
 
     summary = await api_client.get_activity_summary()
     recent = await api_client.get_recent_activity(limit=20)

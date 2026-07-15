@@ -7,6 +7,7 @@ import httpx
 from nicegui import ui
 
 from app.api.client import api_client
+from app.auth import get_username
 from app.components.layout import page_shell
 
 GIT_PROVIDER_OPTIONS = {
@@ -47,10 +48,15 @@ def _wire_test_connection(integration: str, button: ui.button, status_label: ui.
 
 
 async def render_settings() -> None:
-    page_shell("/settings")
+    if not page_shell("/settings"):
+        return
 
     with ui.column().classes("page-content w-full gap-0"):
-        ui.label("Integrations").classes("page-title")
+        with ui.row().classes("w-full items-baseline justify-between no-wrap mb-2"):
+            ui.label("Settings").classes("page-title mb-0")
+            username = get_username()
+            if username:
+                ui.label(f"Signed in as {username}").classes("text-sm text-grey-7")
 
         # --- JIRA ---
         with ui.element("div").classes("integration-card w-full"):

@@ -83,9 +83,12 @@ Useful backend URLs:
 | `BACKEND_URL` | `http://127.0.0.1:8000` | Backend base URL |
 | `API_V1_PREFIX` | `/api/v1` | API version prefix |
 | `PORT` | `9000` | NiceGUI server port |
-| `RELOAD` | `false` | Auto-reload on code changes |
+| `RELOAD` | `true` | Auto-reload on code changes |
+| `STORAGE_SECRET` | local-dev default | NiceGUI user session storage (required for login) |
 
-Integration secrets (JIRA, Git, TestRail, LLM) are stored server-side via the Settings API and are never returned in full on GET requests.
+Integration secrets (JIRA, Git, TestRail, LLM) are stored **per user** in the database after login. `credentials.json` remains a legacy shared fallback for unauthenticated/legacy clients. Secrets are never returned in full on GET.
+
+Auth: open **http://127.0.0.1:9000/login** — seed admin defaults to `admin` / `admin` (`ADMIN_USERNAME` / `ADMIN_PASSWORD`). Set `JWT_SECRET` (and `STORAGE_SECRET`) for any shared environment.
 
 Apply database migrations before first use:
 
@@ -99,10 +102,10 @@ alembic upgrade head
 
 | Layer | Status |
 |-------|--------|
-| **Frontend** | UI complete — all pages, dialogs, inline editing, and comment triage wired to the API client |
-| **Backend** | Phase 0–3 complete — DB, integrations, settings, orchestration, and API contract QA |
+| **Frontend** | UI complete — login/register, all pages, dialogs, Bearer API client |
+| **Backend** | Phase 0–3 + JWT auth and per-user settings |
 
-The frontend works end-to-end with demo/mock data when the backend is down or stubbed, so UI development can proceed independently.
+The frontend works end-to-end with demo/mock data when the backend is down or stubbed, so UI development can proceed independently (after login when the API is up).
 
 ## Architecture
 
