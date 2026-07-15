@@ -100,7 +100,7 @@ alembic upgrade head
 | Layer | Status |
 |-------|--------|
 | **Frontend** | UI complete — all pages, dialogs, inline editing, and comment triage wired to the API client |
-| **Backend** | Phase 0–2 complete — DB, integrations, settings, and orchestration (test cases, code review, activity) |
+| **Backend** | Phase 0–3 complete — DB, integrations, settings, orchestration, and API contract QA |
 
 The frontend works end-to-end with demo/mock data when the backend is down or stubbed, so UI development can proceed independently.
 
@@ -124,3 +124,4 @@ FastAPI backend (8000)
 - [backend/README.md](backend/README.md) — API overview, error handling, project structure, testing
 - [frontend/README.md](frontend/README.md) — UI structure, configuration, API integration details
 - [PROGRESS.md](PROGRESS.md) — Multi-agent backend implementation tracker
+- [docs/API_CONTRACT.md](docs/API_CONTRACT.md) — REST API contract (v1)

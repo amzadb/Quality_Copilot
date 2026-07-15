@@ -1,4 +1,4 @@
-# Quality Copilot — Backend
+﻿# Quality Copilot â€” Backend
 
 FastAPI backend for **Quality Copilot**, an internal tool for AI-assisted test case generation, TestRail/JIRA integration, and pull-request code review. This service exposes a REST API at `/api/v1` for the NiceGUI frontend.
 
@@ -48,7 +48,7 @@ Optional settings can be provided via environment variables or a `.env` file in 
 | `ANTHROPIC_MODEL` | `claude-sonnet-5` | Claude model for LLM integration |
 | `ANTHROPIC_API_VERSION` | `2023-06-01` | Anthropic API version header |
 
-Copy `.env.example` to `.env` and adjust as needed. Integration secrets (JIRA, Bitbucket/GitHub/GitLab, TestRail, LLM) will be stored server-side via the Settings API once implemented — they are never returned in full by GET requests.
+Copy `.env.example` to `.env` and adjust as needed. Integration secrets (JIRA, Bitbucket/GitHub/GitLab, TestRail, LLM) will be stored server-side via the Settings API once implemented â€” they are never returned in full by GET requests.
 
 ## Database setup
 
@@ -86,29 +86,29 @@ Integration tests call async code via `asyncio.run()` so they do not require the
 
 ```
 backend/
-├── app/
-│   ├── main.py                    # FastAPI app factory, exception handlers, /health
-│   ├── config.py                  # Environment-backed settings
-│   ├── api/routes/                # Thin FastAPI routers (one module per domain)
-│   ├── schemas/                   # API request/response Pydantic models
-│   ├── services/                  # Orchestration layer
-│   │   ├── test_case_service.py   # JIRA → LLM → export → TestRail
-│   │   └── code_review_service.py # Git → LLM → review runs
-│   ├── integrations/              # External system clients
-│   │   ├── jira.py
-│   │   ├── git_provider.py
-│   │   ├── llm.py                 # Prompt templates + structured output models
-│   │   └── testrail.py
-│   ├── models/                    # SQLAlchemy DB models (tickets, runs, jobs, …)
-│   │   └── base.py                # Declarative base, engine, SessionLocal, get_db()
-│   ├── jobs/                      # Background task runner (BackgroundTasks MVP)
-│   └── core/
-│       └── errors.py              # AppError + consistent error response shape
-├── alembic/                       # Database migrations
-├── alembic.ini
-├── tests/                         # pytest suite (mirrors app/ concerns)
-├── requirements.txt
-└── README.md
+â”œâ”€â”€ app/
+â”‚   â”œâ”€â”€ main.py                    # FastAPI app factory, exception handlers, /health
+â”‚   â”œâ”€â”€ config.py                  # Environment-backed settings
+â”‚   â”œâ”€â”€ api/routes/                # Thin FastAPI routers (one module per domain)
+â”‚   â”œâ”€â”€ schemas/                   # API request/response Pydantic models
+â”‚   â”œâ”€â”€ services/                  # Orchestration layer
+â”‚   â”‚   â”œâ”€â”€ test_case_service.py   # JIRA â†’ LLM â†’ export â†’ TestRail
+â”‚   â”‚   â””â”€â”€ code_review_service.py # Git â†’ LLM â†’ review runs
+â”‚   â”œâ”€â”€ integrations/              # External system clients
+â”‚   â”‚   â”œâ”€â”€ jira.py
+â”‚   â”‚   â”œâ”€â”€ git_provider.py
+â”‚   â”‚   â”œâ”€â”€ llm.py                 # Prompt templates + structured output models
+â”‚   â”‚   â””â”€â”€ testrail.py
+â”‚   â”œâ”€â”€ models/                    # SQLAlchemy DB models (tickets, runs, jobs, â€¦)
+â”‚   â”‚   â””â”€â”€ base.py                # Declarative base, engine, SessionLocal, get_db()
+â”‚   â”œâ”€â”€ jobs/                      # Background task runner (BackgroundTasks MVP)
+â”‚   â””â”€â”€ core/
+â”‚       â””â”€â”€ errors.py              # AppError + consistent error response shape
+â”œâ”€â”€ alembic/                       # Database migrations
+â”œâ”€â”€ alembic.ini
+â”œâ”€â”€ tests/                         # pytest suite (mirrors app/ concerns)
+â”œâ”€â”€ requirements.txt
+â””â”€â”€ README.md
 ```
 
 ### Architecture
@@ -116,11 +116,11 @@ backend/
 Thin **routes** validate input and delegate to **services** (or directly to **integrations** for simple reads). Services orchestrate integrations, persist via **models**, and enqueue work through **jobs**.
 
 ```
-HTTP request → api/routes → service (orchestration)
-                              ├── integrations/ (JIRA, Git, LLM, TestRail)
-                              ├── models/       (persistence)
-                              └── jobs/         (async export, upload, post-back)
-                    ↓
+HTTP request â†’ api/routes â†’ service (orchestration)
+                              â”œâ”€â”€ integrations/ (JIRA, Git, LLM, TestRail)
+                              â”œâ”€â”€ models/       (persistence)
+                              â””â”€â”€ jobs/         (async export, upload, post-back)
+                    â†“
               schemas/ (API contract validation)
 ```
 
@@ -147,12 +147,13 @@ See `/docs` for full request/response schemas.
 | **Foundation** | DB engine/session, Alembic migrations, pytest scaffold |
 | **Integrations + Settings** | JIRA, Bitbucket, TestRail, Claude LLM clients; settings persistence |
 | **Orchestration services** | Live — test case generation/export/push-back, AI code review, activity dashboard |
+| **QA / contract** | OpenAPI coverage tests; contract error shape for 4xx/422 |
 
 Apply migrations after pull: `alembic upgrade head` (includes `002_orchestration`).
 
 ## Error handling
 
-All API errors follow a consistent shape:
+All API errors follow a consistent shape (including validation `422`):
 
 ```json
 {
@@ -176,59 +177,20 @@ raise AppError(
 )
 ```
 
-Use `not_implemented_yet()` in skeleton services until real logic is added.
+## Testing
 
-## Testing endpoints locally
+```powershell
+cd backend
+.venv\Scripts\activate
+pytest
+```
+
+Contract coverage lives in `tests/api/test_contract.py` (OpenAPI path check + mocked end-to-end flow). See also [`docs/API_CONTRACT.md`](../docs/API_CONTRACT.md).
 
 ### Swagger UI
 
-1. Start the server with `uvicorn app.main:app --reload`
+1. Start the server with `uvicorn app.main:app --reload --port 8000`
 2. Open http://127.0.0.1:8000/docs
 3. Expand an endpoint, click **Try it out**, and execute
 
-### curl
-
-```powershell
-# Health check
-curl http://127.0.0.1:8000/health
-
-# Settings (returns 501 until implemented)
-curl http://127.0.0.1:8000/api/v1/settings
-
-# Generate test cases
-curl -X POST http://127.0.0.1:8000/api/v1/test-cases/generate `
-  -H "Content-Type: application/json" `
-  -d "{\"ticket_key\": \"PROJ-1042\"}"
-```
-
-### Python TestClient
-
-`httpx` is included in `requirements.txt` for FastAPI's test client and future outbound API calls. **`httpx2`** (Pydantic-stewarded successor to `httpx`) is an optional later migration if Starlette's TestClient deprecation warning becomes blocking — not required for Phase 0/1.
-
-```python
-from fastapi.testclient import TestClient
-from app.main import app
-
-client = TestClient(app)
-response = client.get("/api/v1/settings")
-assert response.status_code == 501
-assert response.json()["error"]["code"] == "NOT_IMPLEMENTED"
-```
-
-## Production notes
-
-For production deployment, run uvicorn without `--reload` and consider:
-
-```powershell
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
-```
-
-Long-running LLM endpoints (`POST /test-cases/generate`, `POST /reviews/generate`) are synchronous in v1 — expect 10–60 second response times. Configure frontend timeouts accordingly.
-
-## Next steps
-
-1. Settings persistence (encrypted credential storage)
-2. Wire integrations (JIRA, TestRail, Git provider, LLM)
-3. Database setup (SQLAlchemy engine, Alembic migrations)
-4. Implement orchestration in `test_case_service` and `code_review_service`
-5. Background tasks in `jobs/tasks.py` for export and upload flows
+Long-running LLM endpoints (`POST /test-cases/generate`, `POST /reviews/generate`) are synchronous in v1 — expect 10–60 second response times.

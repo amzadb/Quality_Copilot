@@ -83,16 +83,8 @@ frontend/
 
 ## API integration
 
-The dashboard calls:
+The UI talks to the FastAPI backend at `/api/v1`. With the backend running (Phase 0–3 complete), live responses are preferred.
 
-- `GET /api/v1/activity/summary` — metric cards
-- `GET /api/v1/activity/recent?limit=20` — activity list
+Demo/mock data is used **only when the backend is unreachable** (connection/timeout). HTTP 4xx/5xx from a live API are surfaced to the UI — they are not silently replaced with demo success. Empty `/activity/recent` lists are kept as empty (not replaced by a fake feed).
 
-When the backend returns non-200 (e.g. 501 Not Implemented), the UI falls back to demo data matching the mockup so you can develop the UI independently.
-
-## Next steps
-
-1. Test cases page — JIRA ticket input, generation spinner, case editor
-2. Code review page — PR URL input, diff viewer, comment triage
-3. Settings page — integration forms wired to backend Settings API
-4. Replace demo fallback once backend activity endpoints are implemented
+Contract reference: [`docs/API_CONTRACT.md`](../docs/API_CONTRACT.md).

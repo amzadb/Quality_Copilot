@@ -1,4 +1,10 @@
-"""HTTP client for the FastAPI backend."""
+"""HTTP client for the FastAPI backend.
+
+Phase 3 behavior:
+- Live API responses are used whenever the backend is reachable.
+- HTTP 4xx/5xx raise so the UI can show real errors (no silent fake success).
+- Only network/connectivity failures optionally fall back to demo data.
+"""
 
 from datetime import datetime
 from typing import Any
@@ -7,7 +13,7 @@ import httpx
 
 from app.config import settings
 
-# Demo data matching the dashboard mockup — used when the backend is unavailable or returns 501.
+# Demo data — used only when the backend is unreachable (connection/timeout).
 MOCK_SUMMARY: dict[str, Any] = {
     "tickets_processed": 128,
     "test_cases_generated": 742,
@@ -184,14 +190,12 @@ def _parse_pr_url(url: str) -> tuple[str, int] | None:
     if not cleaned:
         return None
 
-    # bitbucket.org/acme/payments/pull-requests/318
     if "/pull-requests/" in cleaned:
         base, pr_part = cleaned.rsplit("/pull-requests/", 1)
         if pr_part.isdigit():
             repo_path = base.split("bitbucket.org/")[-1] if "bitbucket.org/" in base else base
             return repo_path.strip("/"), int(pr_part)
 
-    # github.com/acme/payments/pull/318
     if "/pull/" in cleaned:
         base, pr_part = cleaned.rsplit("/pull/", 1)
         pr_num = pr_part.split("/")[0]
@@ -206,33 +210,46 @@ class ApiClient:
     def __init__(self, base_url: str | None = None) -> None:
         self.base_url = base_url or settings.api_base
 
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json: dict[str, Any] | None = None,
+        timeout: float = 30.0,
+    ) -> dict[str, Any] | list[Any] | None:
+        """Call the backend. Raises on HTTP errors; returns None only if offline."""
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.request(
+                    method,
+                    f"{self.base_url}{path}",
+                    json=json,
+                )
+        except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError):
+            return None
+
+        if response.status_code >= 400:
+            raise httpx.HTTPStatusError(
+                f"HTTP {response.status_code} for {method} {path}",
+                request=response.request,
+                response=response,
+            )
+        if response.status_code == 204 or not response.content:
+            return None
+        return response.json()
+
     async def _get(self, path: str) -> dict[str, Any] | list[Any] | None:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{self.base_url}{path}")
-            if response.status_code == 200:
-                return response.json()
-        return None
+        return await self._request("GET", path, timeout=30.0)
 
-    async def _post(self, path: str, body: dict[str, Any]) -> dict[str, Any] | None:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(f"{self.base_url}{path}", json=body)
-            if response.status_code == 200:
-                return response.json()
-        return None
+    async def _post(self, path: str, body: dict[str, Any]) -> dict[str, Any] | list[Any] | None:
+        return await self._request("POST", path, json=body, timeout=120.0)
 
-    async def _put(self, path: str, body: dict[str, Any]) -> dict[str, Any] | None:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.put(f"{self.base_url}{path}", json=body)
-            if response.status_code == 200:
-                return response.json()
-        return None
+    async def _put(self, path: str, body: dict[str, Any]) -> dict[str, Any] | list[Any] | None:
+        return await self._request("PUT", path, json=body, timeout=30.0)
 
-    async def _patch(self, path: str, body: dict[str, Any]) -> dict[str, Any] | None:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.patch(f"{self.base_url}{path}", json=body)
-            if response.status_code == 200:
-                return response.json()
-        return None
+    async def _patch(self, path: str, body: dict[str, Any]) -> dict[str, Any] | list[Any] | None:
+        return await self._request("PATCH", path, json=body, timeout=30.0)
 
     async def fetch_jira_ticket(self, ticket_key: str) -> dict[str, Any]:
         data = await self._get(f"/jira/tickets/{ticket_key}")
@@ -353,9 +370,18 @@ class ApiClient:
         data = await self._post(f"/settings/{integration}/test", {})
         if isinstance(data, dict):
             return data
-        return {"ok": True}
+        # Offline — never fake a successful connection test
+        return {
+            "ok": False,
+            "error": {
+                "code": "BACKEND_UNREACHABLE",
+                "message": "Backend is unreachable; cannot test connection.",
+            },
+        }
 
-    async def fetch_pull_request(self, *, url: str | None = None, repo: str | None = None, pr_number: int | None = None) -> dict[str, Any]:
+    async def fetch_pull_request(
+        self, *, url: str | None = None, repo: str | None = None, pr_number: int | None = None
+    ) -> dict[str, Any]:
         params: list[str] = []
         if url:
             params.append(f"url={url}")
@@ -398,6 +424,7 @@ class ApiClient:
                 merged[section].update(values)
                 if values.get("token"):
                     merged[section]["token_set"] = True
+                    merged[section].pop("token", None)
         return merged
 
     async def get_activity_summary(self) -> dict[str, Any]:
@@ -406,7 +433,8 @@ class ApiClient:
 
     async def get_recent_activity(self, limit: int = 20) -> list[dict[str, Any]]:
         data = await self._get(f"/activity/recent?limit={limit}")
-        if isinstance(data, list) and data:
+        # Empty list is a valid live response — do not replace with demo feed.
+        if isinstance(data, list):
             return data
         return [item.copy() for item in MOCK_RECENT]
 

@@ -83,4 +83,5 @@ def test_settings_api_round_trip(client, credentials_file, monkeypatch):
     body = put_response.json()
     assert body["jira"]["token_set"] is True
     assert body["llm"]["token_set"] is True
-    assert body["jira"]["token"] is None
+    assert "token" not in body["jira"]
+    assert "token" not in body["llm"]

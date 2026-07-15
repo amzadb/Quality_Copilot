@@ -59,15 +59,17 @@ class CredentialStore:
 
     def merge_update(self, update: SettingsUpdate) -> SettingsResponse:
         data = self._ensure_loaded()
-        payload = update.model_dump(exclude_none=True)
-
-        for section, values in payload.items():
-            if section not in data:
+        # token fields use Field(exclude=True) so they are omitted from model_dump —
+        # pull them from the model instances explicitly.
+        for section_name in ("jira", "git_provider", "testrail", "llm"):
+            section_model = getattr(update, section_name)
+            if section_model is None:
                 continue
-            section_values = {k: v for k, v in values.items() if v is not None}
-            if "token" in section_values and section_values["token"]:
-                data[section]["token"] = section_values.pop("token")
-            data[section].update(section_values)
+            section_values = section_model.model_dump(exclude_none=True)
+            token = getattr(section_model, "token", None)
+            if token:
+                data[section_name]["token"] = token
+            data[section_name].update(section_values)
 
         self._save()
         return self.to_response()

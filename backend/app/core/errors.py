@@ -1,6 +1,7 @@
 from typing import Any
 
 from fastapi import HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -47,6 +48,9 @@ def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
 
 
 def http_exception_handler(_request: Request, exc: HTTPException) -> JSONResponse:
+    if isinstance(exc, AppError):
+        return app_error_handler(_request, exc)
+
     code = "HTTP_ERROR"
     if isinstance(exc.detail, dict) and "code" in exc.detail:
         return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
@@ -55,5 +59,19 @@ def http_exception_handler(_request: Request, exc: HTTPException) -> JSONRespons
         status_code=exc.status_code,
         content=ErrorResponse(
             error=ErrorDetail(code=code, message=str(exc.detail), details=None)
+        ).model_dump(),
+    )
+
+
+def validation_exception_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
+    """Map FastAPI/Pydantic 422 errors to the contract error shape."""
+    return JSONResponse(
+        status_code=422,
+        content=ErrorResponse(
+            error=ErrorDetail(
+                code="VALIDATION_ERROR",
+                message="Request validation failed.",
+                details={"errors": exc.errors()},
+            )
         ).model_dump(),
     )
