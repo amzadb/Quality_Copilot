@@ -70,3 +70,12 @@ def test_recent_and_summary(db_session):
     assert summary.test_cases_generated == 1
     assert summary.prs_reviewed == 1
     assert summary.avg_review_time_seconds == 42.0
+
+    reset = run_async(service.reset_activity())
+    assert reset.ok is True
+    assert run_async(service.get_recent(limit=10)) == []
+    cleared = run_async(service.get_summary())
+    assert cleared.tickets_processed == 0
+    assert cleared.test_cases_generated == 0
+    assert cleared.prs_reviewed == 0
+    assert cleared.avg_review_time_seconds == 0.0

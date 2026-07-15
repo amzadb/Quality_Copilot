@@ -31,6 +31,7 @@ from app.schemas.testrail import TestRailProject, TestRailSuite, TestRailUploadR
 CONTRACT_PATHS = {
     ("POST", "/api/v1/auth/register"),
     ("POST", "/api/v1/auth/login"),
+    ("POST", "/api/v1/auth/reset-password"),
     ("GET", "/api/v1/auth/me"),
     ("POST", "/api/v1/auth/logout"),
     ("GET", "/api/v1/settings"),
@@ -52,6 +53,7 @@ CONTRACT_PATHS = {
     ("PATCH", "/api/v1/reviews/runs/{run_id}/comments/{comment_id}"),
     ("GET", "/api/v1/activity/recent"),
     ("GET", "/api/v1/activity/summary"),
+    ("POST", "/api/v1/activity/reset"),
 }
 
 

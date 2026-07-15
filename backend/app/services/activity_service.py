@@ -8,11 +8,12 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.base import get_db
 from app.models.pull_request import PullRequestRecord
-from app.models.review import ReviewRun
+from app.models.review import ReviewCommentRecord, ReviewRun
 from app.models.test_case_run import GeneratedTestCase, TestCaseRun
 from app.models.ticket import Ticket
 from app.schemas.activity import (
     ActivityItem,
+    ActivityResetResponse,
     ActivitySummary,
     ReviewActivityItem,
     TestCaseActivityItem,
@@ -103,6 +104,16 @@ class ActivityService:
             prs_reviewed=int(prs_reviewed),
             avg_review_time_seconds=float(avg_review or 0.0),
         )
+
+    async def reset_activity(self) -> ActivityResetResponse:
+        """Clear run history that feeds dashboard summary and recent activity."""
+        # Delete children first — SQLite may not enforce ON DELETE CASCADE via bulk ORM deletes.
+        self._db.query(ReviewCommentRecord).delete()
+        self._db.query(ReviewRun).delete()
+        self._db.query(GeneratedTestCase).delete()
+        self._db.query(TestCaseRun).delete()
+        self._db.commit()
+        return ActivityResetResponse()
 
 
 def get_activity_service(db: Session = Depends(get_db)) -> ActivityService:

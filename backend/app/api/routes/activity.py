@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 
-from app.schemas.activity import ActivityItem, ActivitySummary
+from app.schemas.activity import ActivityItem, ActivityResetResponse, ActivitySummary
 from app.services.activity_service import ActivityService, get_activity_service
 
 router = APIRouter()
@@ -19,3 +19,10 @@ async def get_activity_summary(
     service: ActivityService = Depends(get_activity_service),
 ) -> ActivitySummary:
     return await service.get_summary()
+
+
+@router.post("/reset", response_model=ActivityResetResponse)
+async def reset_activity(
+    service: ActivityService = Depends(get_activity_service),
+) -> ActivityResetResponse:
+    return await service.reset_activity()

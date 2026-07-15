@@ -30,6 +30,11 @@ Create a user + empty settings. Returns `{ access_token, token_type, user }`.
 ### `POST /auth/login`
 Body: `{ "username", "password" }`. Returns the same token envelope as register.
 
+### `POST /auth/reset-password`
+Forgot-password style reset. Body: `{ "username", "new_password" }`.
+**Errors**: `404 USER_NOT_FOUND` if the username does not exist.
+**Response**: `{ "ok": true, "message": "Password updated successfully." }`
+
 ### `GET /auth/me`
 Current user (requires Bearer).
 
@@ -254,6 +259,9 @@ Marks a comment `dismissed` / `addressed` (for the triage state, even before we 
 ---
 
 ## 8. Dashboard
+
+### `POST /activity/reset`
+Clears test-case and review run history used by the dashboard. Summary metrics return zeros and recent activity is empty. Requires auth.
 
 ### `GET /activity/recent?limit=20`
 Backs the dashboard's recent-activity list — a merged, reverse-chronological feed of test-case runs and review runs.

@@ -15,7 +15,7 @@ from nicegui import ui
 from app.auth import clear_session, get_token
 from app.config import settings
 
-_AUTH_PUBLIC_PATHS = {"/auth/login", "/auth/register"}
+_AUTH_PUBLIC_PATHS = {"/auth/login", "/auth/register", "/auth/reset-password"}
 
 # Demo data — used only when the backend is unreachable (connection/timeout).
 MOCK_SUMMARY: dict[str, Any] = {
@@ -295,6 +295,15 @@ class ApiClient:
             raise RuntimeError("Backend unreachable; cannot register.")
         return data
 
+    async def reset_password(self, username: str, new_password: str) -> dict[str, Any]:
+        data = await self._post(
+            "/auth/reset-password",
+            {"username": username, "new_password": new_password},
+        )
+        if not isinstance(data, dict):
+            raise RuntimeError("Backend unreachable; cannot reset password.")
+        return data
+
     async def me(self) -> dict[str, Any] | None:
         data = await self._get("/auth/me")
         return data if isinstance(data, dict) else None
@@ -492,6 +501,12 @@ class ApiClient:
         if isinstance(data, list):
             return data
         return [item.copy() for item in MOCK_RECENT]
+
+    async def reset_activity(self) -> dict[str, Any]:
+        data = await self._post("/activity/reset", {})
+        if isinstance(data, dict):
+            return data
+        raise RuntimeError("Backend unreachable; cannot reset activity.")
 
 
 api_client = ApiClient()

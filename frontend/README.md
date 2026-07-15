@@ -21,7 +21,7 @@ pip install -r requirements.txt
 python -m app.main
 ```
 
-Open **http://127.0.0.1:9000/login** in your browser. Sign in with the seeded admin (`admin` / `admin` by default) or create an account.
+Open **http://127.0.0.1:9000/login** in your browser. Create an account via Sign up, or sign in with an admin you seeded by setting `ADMIN_PASSWORD` in the backend `.env`.
 
 Run alongside the backend:
 
@@ -79,7 +79,7 @@ frontend/
 
 | Route | Page | Status |
 |-------|------|--------|
-| `/login` | Login / Sign up | JWT via backend; token in `app.storage.user` |
+| `/login` | Login / Sign up / Reset password | JWT via backend; token in `app.storage.user` |
 | `/` | Dashboard | Requires auth — metric cards and recent activity |
 | `/test-cases` | Test case generation | Requires auth |
 | `/code-review` | PR code review | Requires auth |

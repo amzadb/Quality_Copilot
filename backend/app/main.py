@@ -5,6 +5,7 @@ from fastapi.exceptions import HTTPException, RequestValidationError
 
 from app.api.routes.router import api_router
 from app.config import settings
+from app.core.auth_config import ensure_auth_secrets
 from app.core.errors import (
     AppError,
     app_error_handler,
@@ -17,6 +18,7 @@ from app.services.auth_service import seed_admin_user
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    ensure_auth_secrets()
     db = SessionLocal()
     try:
         seed_admin_user(db)

@@ -29,3 +29,8 @@ class ActivitySummary(BaseModel):
     test_cases_generated: int
     prs_reviewed: int
     avg_review_time_seconds: float
+
+
+class ActivityResetResponse(BaseModel):
+    ok: bool = True
+    message: str = "Activity reset. Dashboard metrics are now zero."

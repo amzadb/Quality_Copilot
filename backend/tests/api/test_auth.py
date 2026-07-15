@@ -74,3 +74,50 @@ def test_seed_admin_user(app_client, monkeypatch):
         json={"username": "seedadmin", "password": "seedpass1"},
     )
     assert login.status_code == 200
+
+
+def test_seed_admin_skipped_without_password(app_client, monkeypatch):
+    monkeypatch.setattr("app.config.settings.admin_username", "noseed")
+    monkeypatch.setattr("app.config.settings.admin_password", "")
+
+    db_gen = app.dependency_overrides[get_db]()
+    db = next(db_gen)
+    try:
+        assert seed_admin_user(db) is None
+    finally:
+        db_gen.close()
+
+
+def test_reset_password_unknown_user(app_client):
+    response = app_client.post(
+        "/api/v1/auth/reset-password",
+        json={"username": "missinguser", "new_password": "newpass12"},
+    )
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "USER_NOT_FOUND"
+    assert "No account found" in response.json()["error"]["message"]
+
+
+def test_reset_password_success(app_client):
+    app_client.post(
+        "/api/v1/auth/register",
+        json={"username": "changer", "password": "oldpass1"},
+    )
+    response = app_client.post(
+        "/api/v1/auth/reset-password",
+        json={"username": "changer", "new_password": "newpass12"},
+    )
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+
+    old_login = app_client.post(
+        "/api/v1/auth/login",
+        json={"username": "changer", "password": "oldpass1"},
+    )
+    assert old_login.status_code == 401
+
+    new_login = app_client.post(
+        "/api/v1/auth/login",
+        json={"username": "changer", "password": "newpass12"},
+    )
+    assert new_login.status_code == 200

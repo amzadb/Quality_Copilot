@@ -68,5 +68,7 @@ def activity_panel(items: list[dict[str, Any]]) -> None:
                 "flat dense no-caps"
             ).classes("text-gray-600 border border-gray-300 rounded-lg px-3")
 
+        if not items:
+            ui.label("No recent activity.").classes("text-sm text-grey-7 py-4")
         for item in items:
             activity_row(item)

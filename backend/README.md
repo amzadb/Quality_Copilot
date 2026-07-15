@@ -20,6 +20,14 @@ python -m venv .venv
 # Install dependencies
 pip install -r requirements.txt
 
+# Create .env and set a unique JWT_SECRET (required when DEBUG=false)
+copy .env.example .env   # Windows
+# cp .env.example .env   # macOS / Linux
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+# Paste the output into .env as JWT_SECRET=...
+
+# Optional: set ADMIN_PASSWORD in .env to seed an admin on startup (no default password)
+
 # Run the development server
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
@@ -44,10 +52,10 @@ Optional settings can be provided via environment variables or a `.env` file in 
 | `DEBUG` | `false` | Enable debug mode |
 | `DATABASE_URL` | `sqlite:///./quality_copilot.db` | SQLAlchemy database URL (SQLite or PostgreSQL) |
 | `CREDENTIALS_PATH` | `./data/credentials.json` | Legacy shared secrets file (fallback when unauthenticated) |
-| `JWT_SECRET` | local-dev default | **Change in production** — signs access tokens |
+| `JWT_SECRET` | _(required)_ | Signs JWTs — **must** be a unique strong value; app refuses to start without it when `DEBUG=false` |
 | `JWT_EXPIRE_MINUTES` | `1440` | Access token lifetime |
-| `ADMIN_USERNAME` | `admin` | Seeded admin username (created on startup if missing) |
-| `ADMIN_PASSWORD` | `admin` | Seeded admin password |
+| `ADMIN_USERNAME` | `admin` | Username used if admin seed runs |
+| `ADMIN_PASSWORD` | _(empty)_ | If set, seeds that admin on startup; **no default password** |
 | `JIRA_EMAIL` | _(none)_ | Atlassian account email for JIRA API token auth |
 | `ANTHROPIC_MODEL` | `claude-sonnet-5` | Claude model for LLM integration |
 | `ANTHROPIC_API_VERSION` | `2023-06-01` | Anthropic API version header |
@@ -134,7 +142,7 @@ All endpoints are prefixed with `/api/v1`.
 
 | Group | Endpoints | Description |
 |-------|-----------|-------------|
-| **Auth** | `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, `POST /auth/logout` | JWT register/login (public register + login) |
+| **Auth** | `POST /auth/register`, `POST /auth/login`, `POST /auth/reset-password`, `GET /auth/me`, `POST /auth/logout` | JWT register/login/reset (public); me/logout require Bearer |
 | **Settings** | `GET/PUT /settings`, `POST /settings/{integration}/test` | Per-user integration config (auth required; secrets masked on read) |
 | **JIRA** | `GET /jira/tickets/{key}`, `POST .../attachments` | Ticket fetch and file attachment |
 | **Test cases** | `POST /test-cases/generate`, run CRUD, save, download, TestRail upload | Generation, export, and push-back |

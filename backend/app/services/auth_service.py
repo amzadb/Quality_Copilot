@@ -8,7 +8,14 @@ from app.config import settings
 from app.core.errors import AppError
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User, UserSettings
-from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserOut
+from app.schemas.auth import (
+    LoginRequest,
+    RegisterRequest,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
+    TokenResponse,
+    UserOut,
+)
 
 
 def _to_user_out(user: User) -> UserOut:
@@ -83,8 +90,33 @@ def login_user(db: Session, body: LoginRequest) -> TokenResponse:
     return TokenResponse(access_token=token, user=_to_user_out(user))
 
 
+def reset_password(db: Session, body: ResetPasswordRequest) -> ResetPasswordResponse:
+    """Set a new password for an existing user (forgot-password flow)."""
+    username = body.username.strip()
+    user = db.query(User).filter_by(username=username).first()
+    if user is None:
+        raise AppError(
+            status_code=404,
+            code="USER_NOT_FOUND",
+            message=f"No account found with username '{username}'.",
+        )
+    if verify_password(body.new_password, user.password_hash):
+        raise AppError(
+            status_code=400,
+            code="PASSWORD_UNCHANGED",
+            message="New password must be different from the current password.",
+        )
+
+    user.password_hash = hash_password(body.new_password)
+    db.commit()
+    return ResetPasswordResponse()
+
+
 def seed_admin_user(db: Session) -> User | None:
-    """Create the admin user from env if it does not already exist."""
+    """Create the admin user from env if it does not already exist.
+
+    Requires ADMIN_PASSWORD to be set explicitly — there is no default password.
+    """
     username = (settings.admin_username or "").strip()
     password = settings.admin_password or ""
     if not username or not password:

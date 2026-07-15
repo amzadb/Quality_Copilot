@@ -1,9 +1,13 @@
 """Shared pytest fixtures for the Quality Copilot backend."""
 
 import asyncio
+import os
 from collections.abc import Coroutine
 from pathlib import Path
 from typing import Any, TypeVar
+
+# Force a non-production secret before app.config / app.main import (env beats .env file).
+os.environ["JWT_SECRET"] = "pytest-jwt-secret-32chars-minimum!"
 
 import pytest
 from alembic import command

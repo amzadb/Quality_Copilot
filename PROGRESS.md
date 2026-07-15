@@ -14,7 +14,7 @@ Track status for the parallel agent implementation plan. Update this file as eac
 | **Code Review Orchestration** | 2 | **Done** | PR fetch → LLM review → persist + comment triage |
 | **Dashboard / Activity** | 2 | **Done** | Recent feed + summary from run history |
 | **QA / Integration** | 3 | **Done** | Contract tests, OpenAPI coverage, 422 shape, frontend live-API client |
-| **User auth & per-user settings** | — | **Done** | JWT login/register, admin seed, `user_settings` DB + `credentials.json` fallback, NiceGUI login |
+| **User auth & per-user settings** | 4 | **Done** | JWT login/register, admin seed, `user_settings` DB + `credentials.json` fallback, NiceGUI login |
 
 ## Phase 3 deliverables
 
@@ -29,7 +29,8 @@ Track status for the parallel agent implementation plan. Update this file as eac
 
 - [x] `User` + `UserSettings` models; Alembic `003_users`
 - [x] JWT Bearer auth: register, login, me, logout; protect `/api/v1/*` except auth + `/health`
-- [x] Admin seeded from `ADMIN_USERNAME` / `ADMIN_PASSWORD` on startup
+- [x] Admin seeded only when `ADMIN_PASSWORD` is set (no default password)
+- [x] `JWT_SECRET` required (fail closed); ephemeral secret only when `DEBUG=true`
 - [x] Authenticated settings from DB; unauthenticated/legacy path uses `credentials.json`
 - [x] NiceGUI `/login`, session token in `app.storage.user`, Bearer client, sidebar logout
 
@@ -49,9 +50,9 @@ With backend running (`uvicorn app.main:app --reload --port 8000`), open http://
 - **Bitbucket**: username + app password (Basic auth)
 - **Credentials file**: `CREDENTIALS_PATH` (default `./data/credentials.json`) — legacy shared fallback only
 - **LLM**: Claude API key via Settings; model via `ANTHROPIC_MODEL` (`claude-sonnet-5`)
-- **Auth**: set `JWT_SECRET` in any shared/production environment; default is local-dev only
-- **Admin seed**: `ADMIN_USERNAME` / `ADMIN_PASSWORD` (defaults `admin` / `admin`)
-- **Frontend session**: `STORAGE_SECRET` for NiceGUI `app.storage.user`
+- **Auth**: set a unique `JWT_SECRET` (required when `DEBUG=false`; public/old defaults are rejected)
+- **Admin seed**: opt-in via `ADMIN_PASSWORD` only — no baked-in password
+- **Frontend session**: set `STORAGE_SECRET` for NiceGUI `app.storage.user` (do not rely on the code default in shared envs)
 
 ## Status: Phase 0–3 + user auth complete
 

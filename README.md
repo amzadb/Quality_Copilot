@@ -88,7 +88,7 @@ Useful backend URLs:
 
 Integration secrets (JIRA, Git, TestRail, LLM) are stored **per user** in the database after login. `credentials.json` remains a legacy shared fallback for unauthenticated/legacy clients. Secrets are never returned in full on GET.
 
-Auth: open **http://127.0.0.1:9000/login** — seed admin defaults to `admin` / `admin` (`ADMIN_USERNAME` / `ADMIN_PASSWORD`). Set `JWT_SECRET` (and `STORAGE_SECRET`) for any shared environment.
+Auth: copy `backend/.env.example` → `backend/.env` and set a unique `JWT_SECRET` (required when `DEBUG=false`). Optional admin seed only if you set `ADMIN_PASSWORD` (there is no default admin password — otherwise use Sign up). Also set frontend `STORAGE_SECRET` for any shared environment.
 
 Apply database migrations before first use:
 
