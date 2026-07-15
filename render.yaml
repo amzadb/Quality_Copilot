@@ -56,7 +56,12 @@ services:
         value: "0.0.0.0"
       - key: STORAGE_SECRET
         generateValue: true
-      # Set after first API deploy to your API URL, e.g.:
-      # https://quality-copilot-api.onrender.com
+      # Hostname of the API service (frontend prepends https:// if needed).
+      - key: BACKEND_HOST
+        fromService:
+          name: quality-copilot-api
+          type: web
+          property: host
+      # Optional override, e.g. https://quality-copilot-api.onrender.com
       - key: BACKEND_URL
         sync: false

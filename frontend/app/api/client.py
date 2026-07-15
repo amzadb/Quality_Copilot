@@ -236,8 +236,9 @@ class ApiClient:
         *,
         json: dict[str, Any] | None = None,
         timeout: float = 30.0,
+        require_backend: bool = False,
     ) -> dict[str, Any] | list[Any] | None:
-        """Call the backend. Raises on HTTP errors; returns None only if offline."""
+        """Call the backend. Raises on HTTP errors; returns None if offline (unless require_backend)."""
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.request(
@@ -246,7 +247,13 @@ class ApiClient:
                     json=json,
                     headers=self._headers(),
                 )
-        except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError):
+        except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError) as exc:
+            if require_backend:
+                raise RuntimeError(
+                    f"Backend unreachable at {self.base_url}{path} ({exc.__class__.__name__}). "
+                    "On Render, set the web service env BACKEND_URL to your API URL "
+                    "(e.g. https://quality-copilot-api.onrender.com)."
+                ) from exc
             return None
 
         if response.status_code == 401:
@@ -279,9 +286,16 @@ class ApiClient:
         return await self._request("PATCH", path, json=body, timeout=30.0)
 
     async def login(self, username: str, password: str) -> dict[str, Any]:
-        data = await self._post("/auth/login", {"username": username, "password": password})
+        # Cold-start free Render services can take >30s to wake.
+        data = await self._request(
+            "POST",
+            "/auth/login",
+            json={"username": username, "password": password},
+            timeout=90.0,
+            require_backend=True,
+        )
         if not isinstance(data, dict):
-            raise RuntimeError("Backend unreachable; cannot log in.")
+            raise RuntimeError("Unexpected empty response from login.")
         return data
 
     async def register(
@@ -290,18 +304,27 @@ class ApiClient:
         body: dict[str, Any] = {"username": username, "password": password}
         if email:
             body["email"] = email
-        data = await self._post("/auth/register", body)
+        data = await self._request(
+            "POST",
+            "/auth/register",
+            json=body,
+            timeout=90.0,
+            require_backend=True,
+        )
         if not isinstance(data, dict):
-            raise RuntimeError("Backend unreachable; cannot register.")
+            raise RuntimeError("Unexpected empty response from register.")
         return data
 
     async def reset_password(self, username: str, new_password: str) -> dict[str, Any]:
-        data = await self._post(
+        data = await self._request(
+            "POST",
             "/auth/reset-password",
-            {"username": username, "new_password": new_password},
+            json={"username": username, "new_password": new_password},
+            timeout=90.0,
+            require_backend=True,
         )
         if not isinstance(data, dict):
-            raise RuntimeError("Backend unreachable; cannot reset password.")
+            raise RuntimeError("Unexpected empty response from reset-password.")
         return data
 
     async def me(self) -> dict[str, Any] | None:

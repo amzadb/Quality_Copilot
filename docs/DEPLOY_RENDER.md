@@ -19,10 +19,17 @@ Vercel is not used — NiceGUI needs a long-running server (see root README).
 
 ## 2. Wire the frontend to the API
 
+The Blueprint sets `BACKEND_HOST` from the API service. The web app builds
+`https://<BACKEND_HOST>` automatically.
+
+If Sign up shows **Backend unreachable** / no hits in API logs, the web service is
+still pointing at localhost. Fix in the Render dashboard:
+
 1. Open **quality-copilot-api** → copy its URL (e.g. `https://quality-copilot-api.onrender.com`).
-2. Open **quality-copilot-web** → **Environment**:
-   - `BACKEND_URL` = that API URL (no trailing slash)
-3. Manual deploy / restart the web service.
+2. Open **quality-copilot-web** → **Environment** → set:
+   - `BACKEND_URL` = that full URL (**https**, no trailing slash)
+3. **Manual Deploy** → restart the web service.
+4. In web logs you should see: `Backend API base: https://…/api/v1`
 
 Optional: set `ADMIN_PASSWORD` on the API service to seed an admin on startup. Otherwise use **Sign up** on `/login`.
 

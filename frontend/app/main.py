@@ -42,6 +42,7 @@ def main() -> None:
     root = Path(__file__).resolve().parents[1]
     print(f"Quality Copilot frontend starting from: {root}")
     print(f"Listening on http://{settings.host}:{settings.port}/login")
+    print(f"Backend API base: {settings.api_base}")
     configure_notify_defaults()
     ui.run(
         title=settings.app_title,

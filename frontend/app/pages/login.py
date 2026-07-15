@@ -183,4 +183,5 @@ def _error_message(exc: Exception, fallback: str) -> str:
         except Exception:  # noqa: BLE001
             pass
         return f"{fallback} (HTTP {exc.response.status_code})"
-    return fallback
+    message = str(exc).strip()
+    return message or fallback
