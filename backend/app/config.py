@@ -1,4 +1,7 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.db_url import normalize_database_url
 
 
 class AppSettings(BaseSettings):
@@ -18,6 +21,13 @@ class AppSettings(BaseSettings):
     admin_username: str = "admin"
     # No default — admin is only seeded when ADMIN_PASSWORD is set explicitly.
     admin_password: str = ""
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalize_database_url(cls, value: object) -> object:
+        if isinstance(value, str):
+            return normalize_database_url(value)
+        return value
 
 
 settings = AppSettings()

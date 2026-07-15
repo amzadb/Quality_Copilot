@@ -122,9 +122,20 @@ FastAPI backend (8000)
         └── jobs/            Background tasks (MVP via BackgroundTasks)
 ```
 
+## Deploy on Render (free tier)
+
+This stack needs long-running Python processes — **use Render, not Vercel**. A Blueprint is included at [`render.yaml`](render.yaml):
+
+1. Push to GitHub → [Render](https://dashboard.render.com) → **New** → **Blueprint** → select this repo.
+2. After the API is live, set the web service env `BACKEND_URL` to the API URL (e.g. `https://quality-copilot-api.onrender.com`).
+3. Open the web service URL → `/login`.
+
+Full steps and free-tier caveats (sleep/cold starts, Postgres): [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md).
+
 ## Further reading
 
 - [backend/README.md](backend/README.md) — API overview, error handling, project structure, testing
 - [frontend/README.md](frontend/README.md) — UI structure, configuration, API integration details
 - [PROGRESS.md](PROGRESS.md) — Multi-agent backend implementation tracker
 - [docs/API_CONTRACT.md](docs/API_CONTRACT.md) — REST API contract (v1)
+- [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md) — Deploy API + UI on Render

@@ -6,6 +6,8 @@ pydantic-settings>=2.6.0,<3.0.0
 python-multipart>=0.0.18
 sqlalchemy>=2.0.0,<3.0.0
 alembic>=1.14.0,<2.0.0
+# Postgres (Render / production). Local SQLite needs no extra driver.
+psycopg[binary]>=3.1.0,<4.0.0
 
 # HTTP client (FastAPI TestClient, future JIRA/TestRail/Git API calls)
 # httpx works today; httpx2 is the Pydantic-stewarded successor — optional migration later

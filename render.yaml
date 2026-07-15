@@ -1,0 +1,62 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Deploy: Render Dashboard → New → Blueprint → connect amzadb/Quality_Copilot
+#
+# Free web services sleep after ~15 minutes of idle traffic (cold start on next request).
+
+databases:
+  - name: quality-copilot-db
+    plan: free
+    databaseName: quality_copilot
+    user: quality_copilot
+
+services:
+  - type: web
+    name: quality-copilot-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.11"
+      - key: DEBUG
+        value: "false"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRE_MINUTES
+        value: "1440"
+      - key: ADMIN_USERNAME
+        value: admin
+      # Set in the Render dashboard if you want a seeded admin (no default).
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: quality-copilot-db
+          property: connectionString
+      - key: CREDENTIALS_PATH
+        value: /tmp/credentials.json
+
+  - type: web
+    name: quality-copilot-web
+    runtime: python
+    plan: free
+    rootDir: frontend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.main
+    healthCheckPath: /login
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.11"
+      - key: RELOAD
+        value: "false"
+      - key: HOST
+        value: "0.0.0.0"
+      - key: STORAGE_SECRET
+        generateValue: true
+      # Set after first API deploy to your API URL, e.g.:
+      # https://quality-copilot-api.onrender.com
+      - key: BACKEND_URL
+        sync: false

@@ -41,10 +41,11 @@ async def settings_page() -> None:
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
     print(f"Quality Copilot frontend starting from: {root}")
-    print(f"Open http://127.0.0.1:{settings.port}/login")
+    print(f"Listening on http://{settings.host}:{settings.port}/login")
     configure_notify_defaults()
     ui.run(
         title=settings.app_title,
+        host=settings.host,
         port=settings.port,
         reload=settings.reload,
         storage_secret=settings.storage_secret,
