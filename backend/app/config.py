@@ -21,6 +21,8 @@ class AppSettings(BaseSettings):
     admin_username: str = "admin"
     # No default — admin is only seeded when ADMIN_PASSWORD is set explicitly.
     admin_password: str = ""
+    # Fernet key for encrypting integration tokens at rest (see credential_encryption).
+    credentials_encryption_key: str = ""
 
     @field_validator("database_url", mode="before")
     @classmethod

@@ -9,6 +9,9 @@ Thanks for contributing. This project is a FastAPI backend plus NiceGUI frontend
 
 ## Local setup
 
+<details>
+<summary><strong>Windows (PowerShell)</strong></summary>
+
 ```powershell
 # Backend
 cd backend
@@ -16,7 +19,7 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env
-# Set JWT_SECRET in .env (required when DEBUG=false)
+# Set JWT_SECRET and CREDENTIALS_ENCRYPTION_KEY in .env (required when DEBUG=false)
 alembic upgrade head
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
@@ -28,6 +31,32 @@ pip install -r requirements.txt
 python -m app.main
 ```
 
+</details>
+
+<details>
+<summary><strong>macOS / Linux (bash)</strong></summary>
+
+```bash
+# Backend
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+# Set JWT_SECRET and CREDENTIALS_ENCRYPTION_KEY in .env (required when DEBUG=false)
+alembic upgrade head
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+# Frontend (second terminal)
+cd frontend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m app.main
+```
+
+</details>
+
 Open http://127.0.0.1:9000/login
 
 More detail: [README.md](README.md), [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md).
@@ -36,13 +65,13 @@ More detail: [README.md](README.md), [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.
 
 From `backend/` with the backend venv active:
 
-```powershell
+```bash
 python -m pytest
 ```
 
 Focused runs:
 
-```powershell
+```bash
 python -m pytest tests/api/test_auth.py -q
 python -m pytest tests/api/test_contract.py -q
 ```

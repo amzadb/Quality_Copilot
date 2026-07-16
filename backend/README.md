@@ -20,11 +20,13 @@ python -m venv .venv
 # Install dependencies
 pip install -r requirements.txt
 
-# Create .env and set a unique JWT_SECRET (required when DEBUG=false)
+# Create .env and set JWT_SECRET + CREDENTIALS_ENCRYPTION_KEY (required when DEBUG=false)
 copy .env.example .env   # Windows
 # cp .env.example .env   # macOS / Linux
 python -c "import secrets; print(secrets.token_urlsafe(32))"
-# Paste the output into .env as JWT_SECRET=...
+# Paste into .env as JWT_SECRET=...
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Paste into .env as CREDENTIALS_ENCRYPTION_KEY=...
 
 # Optional: set ADMIN_PASSWORD in .env to seed an admin on startup (no default password)
 
@@ -53,6 +55,7 @@ Optional settings can be provided via environment variables or a `.env` file in 
 | `DATABASE_URL` | `sqlite:///./quality_copilot.db` | SQLAlchemy database URL (SQLite or PostgreSQL) |
 | `CREDENTIALS_PATH` | `./data/credentials.json` | Legacy shared secrets file (fallback when unauthenticated) |
 | `JWT_SECRET` | _(required)_ | Signs JWTs — **must** be a unique strong value; app refuses to start without it when `DEBUG=false` |
+| `CREDENTIALS_ENCRYPTION_KEY` | _(required)_ | Fernet key for encrypting integration tokens at rest |
 | `JWT_EXPIRE_MINUTES` | `1440` | Access token lifetime |
 | `ADMIN_USERNAME` | `admin` | Username used if admin seed runs |
 | `ADMIN_PASSWORD` | _(empty)_ | If set, seeds that admin on startup; **no default password** |

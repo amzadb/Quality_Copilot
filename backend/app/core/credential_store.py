@@ -12,6 +12,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.core.credential_encryption import decrypt_sections, encrypt_sections
 from app.core.deps import get_optional_user
 from app.models.base import get_db
 from app.models.user import User, UserSettings
@@ -81,7 +82,8 @@ class FileCredentialStore:
             return self._data
         if self._path.exists():
             raw = json.loads(self._path.read_text(encoding="utf-8"))
-            self._data = {**_empty_sections(), **raw}
+            merged = {**_empty_sections(), **raw}
+            self._data = decrypt_sections(merged)
         else:
             self._data = _empty_sections()
         return self._data
@@ -93,7 +95,8 @@ class FileCredentialStore:
     def _save(self) -> None:
         data = self._ensure_loaded()
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        encrypted = encrypt_sections(data)
+        self._path.write_text(json.dumps(encrypted, indent=2), encoding="utf-8")
 
     def get_section(self, name: str) -> dict[str, Any]:
         return deepcopy(self._ensure_loaded().get(name, {}))
@@ -132,12 +135,13 @@ class DbCredentialStore:
         return row
 
     def _as_dict(self, row: UserSettings) -> dict[str, dict[str, Any]]:
-        return {
+        stored = {
             "jira": dict(row.jira or {}),
             "git_provider": dict(row.git_provider or {}),
             "testrail": dict(row.testrail or {}),
             "llm": dict(row.llm or {}),
         }
+        return decrypt_sections(stored)
 
     def get_section(self, name: str) -> dict[str, Any]:
         return deepcopy(self._as_dict(self._row()).get(name, {}))
@@ -145,10 +149,11 @@ class DbCredentialStore:
     def merge_update(self, update: SettingsUpdate) -> SettingsResponse:
         row = self._row()
         merged = _apply_update(self._as_dict(row), update)
-        row.jira = merged["jira"]
-        row.git_provider = merged["git_provider"]
-        row.testrail = merged["testrail"]
-        row.llm = merged["llm"]
+        encrypted = encrypt_sections(merged)
+        row.jira = encrypted["jira"]
+        row.git_provider = encrypted["git_provider"]
+        row.testrail = encrypted["testrail"]
+        row.llm = encrypted["llm"]
         self._db.commit()
         self._db.refresh(row)
         return _to_response(merged)

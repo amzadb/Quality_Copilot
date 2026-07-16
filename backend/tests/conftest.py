@@ -8,6 +8,7 @@ from typing import Any, TypeVar
 
 # Force a non-production secret before app.config / app.main import (env beats .env file).
 os.environ["JWT_SECRET"] = "pytest-jwt-secret-32chars-minimum!"
+os.environ["CREDENTIALS_ENCRYPTION_KEY"] = "ygjzyPnRySHQ377uZzmZEpRXGkc8HqdG7aa90N5Xppc="
 
 import pytest
 from alembic import command

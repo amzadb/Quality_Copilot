@@ -42,7 +42,7 @@ Use the **quality-copilot-web** URL, e.g. `https://quality-copilot-web.onrender.
 - Services **sleep after ~15 minutes** idle; the first request can take 30–60+ seconds.
 - SQLite is not used on Render — the Blueprint attaches Postgres via `DATABASE_URL`.
 - Local files under `/tmp` (legacy `credentials.json`) are ephemeral; prefer Settings after login (DB-backed).
-- Keep `JWT_SECRET` and `STORAGE_SECRET` as Render-generated values (do not commit them).
+- Keep `JWT_SECRET`, `CREDENTIALS_ENCRYPTION_KEY`, and `STORAGE_SECRET` as Render-generated values (do not commit them).
 
 ## Manual env checklist
 
@@ -52,6 +52,7 @@ Use the **quality-copilot-web** URL, e.g. `https://quality-copilot-web.onrender.
 |----------|----------|--------|
 | `DATABASE_URL` | yes | From Render Postgres (Blueprint sets this) |
 | `JWT_SECRET` | yes | Blueprint can generate |
+| `CREDENTIALS_ENCRYPTION_KEY` | yes | Blueprint can generate; encrypts integration tokens at rest |
 | `ADMIN_PASSWORD` | optional | Seeds admin if set |
 | `JIRA_EMAIL` | optional | For JIRA API token auth |
 

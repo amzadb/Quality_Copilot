@@ -30,6 +30,7 @@ Track status for the parallel agent implementation plan. Update this file as eac
 - [x] `User` + `UserSettings` models; Alembic `003_users`
 - [x] JWT Bearer auth: register, login, me, logout; protect `/api/v1/*` except auth + `/health`
 - [x] Admin seeded only when `ADMIN_PASSWORD` is set (no default password)
+- [x] Integration tokens encrypted at rest (`CREDENTIALS_ENCRYPTION_KEY` / Fernet)
 - [x] `JWT_SECRET` required (fail closed); ephemeral secret only when `DEBUG=true`
 - [x] Authenticated settings from DB; unauthenticated/legacy path uses `credentials.json`
 - [x] NiceGUI `/login`, session token in `app.storage.user`, Bearer client, sidebar logout
@@ -50,7 +51,7 @@ With backend running (`uvicorn app.main:app --reload --port 8000`), open http://
 - **Bitbucket**: username + app password (Basic auth)
 - **Credentials file**: `CREDENTIALS_PATH` (default `./data/credentials.json`) — legacy shared fallback only
 - **LLM**: Claude API key via Settings; model via `ANTHROPIC_MODEL` (`claude-sonnet-5`)
-- **Auth**: set a unique `JWT_SECRET` (required when `DEBUG=false`; public/old defaults are rejected)
+- **Auth**: set unique `JWT_SECRET` and `CREDENTIALS_ENCRYPTION_KEY` (required when `DEBUG=false`)
 - **Admin seed**: opt-in via `ADMIN_PASSWORD` only — no baked-in password
 - **Frontend session**: set `STORAGE_SECRET` for NiceGUI `app.storage.user` (do not rely on the code default in shared envs)
 

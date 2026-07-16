@@ -43,6 +43,11 @@ Quality_Copilot/
 
 ## Quick start
 
+Run both services in separate terminals.
+
+<details>
+<summary><strong>Windows (PowerShell)</strong></summary>
+
 ```powershell
 # Terminal 1 — Backend
 cd backend
@@ -50,7 +55,9 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env
-# Set JWT_SECRET in .env (required when DEBUG=false)
+# Set JWT_SECRET and CREDENTIALS_ENCRYPTION_KEY in .env (required when DEBUG=false)
+# JWT: python -c "import secrets; print(secrets.token_urlsafe(32))"
+# Fernet: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 alembic upgrade head
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
@@ -61,6 +68,34 @@ python -m venv .venv
 pip install -r requirements.txt
 python -m app.main
 ```
+
+</details>
+
+<details>
+<summary><strong>macOS / Linux (bash)</strong></summary>
+
+```bash
+# Terminal 1 — Backend
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+# Set JWT_SECRET and CREDENTIALS_ENCRYPTION_KEY in .env (required when DEBUG=false)
+# JWT: python -c "import secrets; print(secrets.token_urlsafe(32))"
+# Fernet: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+alembic upgrade head
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+# Terminal 2 — Frontend
+cd frontend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m app.main
+```
+
+</details>
 
 Open **http://127.0.0.1:9000/login** — use **Sign up**, or set `ADMIN_PASSWORD` in the backend `.env` to seed an admin.
 
@@ -93,6 +128,7 @@ Useful backend URLs:
 | `DEBUG` | `false` | Debug mode |
 | `DATABASE_URL` | `sqlite:///./quality_copilot.db` | SQLAlchemy URL (Postgres on Render) |
 | `JWT_SECRET` | _(required)_ | Unique secret; app refuses insecure defaults when `DEBUG=false` |
+| `CREDENTIALS_ENCRYPTION_KEY` | _(required)_ | Fernet key; integration tokens encrypted at rest in DB/file |
 | `ADMIN_PASSWORD` | _(empty)_ | Optional admin seed — no baked-in password |
 
 ### Frontend (`frontend/.env`)
@@ -106,7 +142,9 @@ Useful backend URLs:
 | `RELOAD` | `true` | Auto-reload on code changes |
 | `STORAGE_SECRET` | local-dev default | NiceGUI session storage (set uniquely in production) |
 
-Integration secrets are stored **per user** after login. `credentials.json` is only a legacy fallback. Secrets are never returned in full on GET.
+Integration secrets are stored **per user** after login, with **tokens encrypted at rest** (Fernet via `CREDENTIALS_ENCRYPTION_KEY`). `credentials.json` is only a legacy fallback. Secrets are never returned in full on GET.
+
+Auth: set unique `JWT_SECRET` and `CREDENTIALS_ENCRYPTION_KEY` in `backend/.env` (required when `DEBUG=false`). Optional admin via `ADMIN_PASSWORD`; set frontend `STORAGE_SECRET` in shared environments.
 
 ## Deploy on Render
 

@@ -36,7 +36,8 @@ Feature requests and non-security bugs belong in normal GitHub issues or pull re
 
 ## Hardening notes for operators
 
-- Always set a unique `JWT_SECRET` and frontend `STORAGE_SECRET` in any shared or production environment
+- Always set unique `JWT_SECRET`, `CREDENTIALS_ENCRYPTION_KEY`, and frontend `STORAGE_SECRET` in any shared or production environment
 - Never commit `.env` files or live API tokens
+- Integration tokens are encrypted at rest (Fernet); rotating `CREDENTIALS_ENCRYPTION_KEY` without re-saving settings will make existing tokens unreadable
 - Prefer per-user Settings (database) over shared `credentials.json`
 - Rotate integration tokens if they may have been exposed in logs or chat
